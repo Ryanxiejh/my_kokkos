@@ -47,10 +47,8 @@
 
 #if defined(KOKKOS_ENABLE_SYCL)
 namespace Kokkos {
-namespace Experimental {
-class SYCLDeviceUSMSpace;  ///< Memory space on SYCL device
+class SYCLSpace;  ///< Memory space on SYCL device
 class SYCL;                ///< Execution space for SYCL
-}  // namespace Experimental
 }  // namespace Kokkos
 #endif
 #endif
