@@ -8,7 +8,7 @@
 namespace Kokkos{
 namespace Impl{
 
-template <class FunctorType, class ExecPolicy>
+template <class FunctorType, class... Traits>
 class ParallelFor<FunctorType, Kokkos::RangePolicy<Traits...>, Kokkos::SYCL> {
 public:
     using Policy = Kokkos::RangePolicy<Traits...>;

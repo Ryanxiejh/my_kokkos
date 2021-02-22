@@ -35,7 +35,6 @@ namespace Impl {
 int get_gpu(const InitArguments& args);
 }  // namespace Impl
 
-namespace Experimental {
 SYCL::SYCL() : m_space_instance(&Impl::SYCLInternal::singleton()) {
   Impl::SYCLInternal::singleton().verify_is_initialized(
       "SYCL instance constructor");
@@ -193,28 +192,28 @@ int g_hip_space_factory_initialized =
 void SYCLSpaceInitializer::initialize(const InitArguments& args) {
   int use_gpu = Kokkos::Impl::get_gpu(args);
 
-  if (std::is_same<Kokkos::Experimental::SYCL,
+  if (std::is_same<Kokkos::SYCL,
                    Kokkos::DefaultExecutionSpace>::value ||
       0 < use_gpu) {
     // FIXME_SYCL choose a specific device
-    Kokkos::Experimental::SYCL::impl_initialize(
-        Kokkos::Experimental::SYCL::SYCLDevice(cl::sycl::default_selector()));
+    Kokkos::SYCL::impl_initialize(
+        Kokkos::SYCL::SYCLDevice(cl::sycl::default_selector()));
   }
 }
 
 void SYCLSpaceInitializer::finalize(const bool all_spaces) {
-  if (std::is_same<Kokkos::Experimental::SYCL,
+  if (std::is_same<Kokkos::SYCL,
                    Kokkos::DefaultExecutionSpace>::value ||
       all_spaces) {
-    if (Kokkos::Experimental::SYCL::impl_is_initialized())
-      Kokkos::Experimental::SYCL::impl_finalize();
+    if (Kokkos::SYCL::impl_is_initialized())
+      Kokkos::SYCL::impl_finalize();
   }
 }
 
 void SYCLSpaceInitializer::fence() {
   // FIXME_SYCL should be
-  //  Kokkos::Experimental::SYCL::impl_static_fence();
-  Kokkos::Experimental::SYCL().fence();
+  //  Kokkos::SYCL::impl_static_fence();
+  Kokkos::SYCL().fence();
 }
 
 void SYCLSpaceInitializer::print_configuration(std::ostream& msg,
@@ -226,9 +225,8 @@ void SYCLSpaceInitializer::print_configuration(std::ostream& msg,
   msg << "\nRuntime Configuration:" << std::endl;
   // FIXME_SYCL not implemented
   std::abort();
-  // Experimental::SYCL::print_configuration(msg, detail);
+  // SYCL::print_configuration(msg, detail);
 }
 
 }  // namespace Impl
-}  // namespace Experimental
 }  // namespace Kokkos
