@@ -77,8 +77,30 @@ class SYCL {
   /// \brief Free any resources being consumed by the device.
   static void impl_finalize();
 
-  sycl::device m_device;
-  static void impl_initialize(const sycl::device_selector& selector);
+  //sycl::device m_device;
+  struct SYCLDevice {
+    SYCLDevice();
+    explicit SYCLDevice(cl::sycl::device d);
+    explicit SYCLDevice(const cl::sycl::device_selector& selector);
+    explicit SYCLDevice(size_t id);
+    explicit SYCLDevice(const std::function<bool(const sycl::device&)>& pred);
+
+    cl::sycl::device get_device() const;
+
+    friend std::ostream& operator<<(std::ostream& os, const SYCLDevice& that) {
+      return that.info(os);
+    }
+
+    static std::ostream& list_devices(std::ostream& os);
+    static void list_devices();
+
+   private:
+    std::ostream& info(std::ostream& os) const;
+
+    cl::sycl::device m_device;
+  };
+  static void impl_initialize(SYCLDevice = SYCLDevice());
+  //static void impl_initialize(const sycl::device_selector& selector);
 
   int sycl_device() const;
 
