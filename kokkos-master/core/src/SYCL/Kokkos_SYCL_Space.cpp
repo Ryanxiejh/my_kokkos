@@ -128,9 +128,9 @@ void* SYCLSpace::impl_allocate(
   void* const hostPtr = cl::sycl::malloc_device(arg_alloc_size, queue);
 
   if (hostPtr == nullptr)
-    throw RawMemoryAllocationFailure(
-        arg_alloc_size, 1, RawMemoryAllocationFailure::FailureMode::Unknown,
-        RawMemoryAllocationFailure::AllocationMechanism::SYCLMalloc);
+    throw Experimental::RawMemoryAllocationFailure(
+        arg_alloc_size, 1, Experimental::RawMemoryAllocationFailure::FailureMode::Unknown,
+        Experimental::RawMemoryAllocationFailure::AllocationMechanism::SYCLMalloc);
 
   if (Kokkos::Profiling::profileLibraryLoaded()) {
     const size_t reported_size =
