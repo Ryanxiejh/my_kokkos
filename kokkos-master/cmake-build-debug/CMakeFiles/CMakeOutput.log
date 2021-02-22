@@ -1,0 +1,28 @@
+The system is: Windows - 10.0.18363 - AMD64
+Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+Compiler: D:/Dev-Cpp/MinGW64/bin/g++.exe 
+Build flags: 
+Id flags:  
+
+The output was:
+0
+
+
+Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "a.exe"
+
+The CXX compiler identification is GNU, found in "E:/实验室/大数据项目/太湖环境/sycl_kokkos/kokkos-master/cmake-build-debug/CMakeFiles/3.16.5/CompilerIdCXX/a.exe"
+
+The system is: Windows - 10.0.18363 - AMD64
+Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+Compiler: D:/Dev-Cpp/MinGW64/bin/g++.exe 
+Build flags: 
+Id flags:  
+
+The output was:
+0
+
+
+Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "a.exe"
+
+The CXX compiler identification is GNU, found in "E:/实验室/大数据项目/太湖环境/sycl_kokkos/kokkos-master/cmake-build-debug/CMakeFiles/3.17.5/CompilerIdCXX/a.exe"
+

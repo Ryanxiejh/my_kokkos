@@ -1,0 +1,31 @@
+"E:\CLion 2020.1.3\bin\cmake\win\bin\cmake.exe" -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=E:/CMake/bin/cmake.exe -DCMAKE_C_COMPILER=D:/Dev-Cpp/MinGW64/bin/gcc.exe -DCMAKE_CXX_COMPILER=D:/Dev-Cpp/MinGW64/bin/g++.exe -G "CodeBlocks - MinGW Makefiles" E:\实验室\大数据项目\太湖环境\sycl_kokkos\kokkos-master
+-- Setting default Kokkos CXX standard to 14
+-- The CXX compiler identification is GNU 4.9.2
+-- Check for working CXX compiler: D:/Dev-Cpp/MinGW64/bin/g++.exe
+-- Check for working CXX compiler: D:/Dev-Cpp/MinGW64/bin/g++.exe - broken
+CMake Error at E:/CLion 2020.1.3/bin/cmake/win/share/cmake-3.17/Modules/CMakeTestCXXCompiler.cmake:53 (message):
+  The C++ compiler
+
+    "D:/Dev-Cpp/MinGW64/bin/g++.exe"
+
+  is not able to compile a simple test program.
+
+  It fails with the following output:
+
+    Change Dir: E:/瀹為獙瀹�/澶ф暟鎹」鐩�/澶箹鐜/sycl_kokkos/kokkos-master/cmake-build-debug/CMakeFiles/CMakeTmp
+    
+    Run Build Command(s):E:/CMake/bin/cmake.exe cmTC_38e40/fast && CMake Error: The source directory "E:/鐎圭偤鐛欑��?婢堆勬殶閹诡噣銆嶉惄?婢额亝绠归悳顖氼暔/sycl_kokkos/kokkos-master/cmake-build-debug/CMakeFiles/CMakeTmp/cmTC_38e40/fast" does not exist.
+    Specify --help for usage, or press the help button on the CMake GUI.
+    
+    
+
+  
+
+  CMake will not be able to correctly generate this project.
+Call Stack (most recent call first):
+  CMakeLists.txt:89 (PROJECT)
+
+
+-- Configuring incomplete, errors occurred!
+See also "E:/瀹為獙瀹�/澶ф暟鎹」鐩�/澶箹鐜/sycl_kokkos/kokkos-master/cmake-build-debug/CMakeFiles/CMakeOutput.log".
+See also "E:/瀹為獙瀹�/澶ф暟鎹」鐩�/澶箹鐜/sycl_kokkos/kokkos-master/cmake-build-debug/CMakeFiles/CMakeError.log".
