@@ -653,4 +653,5 @@ private:
 
 
 
+
 #endif //KOKKOS_SYCL_PARALLEL_HPP_
