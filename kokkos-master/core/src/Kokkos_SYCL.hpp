@@ -77,7 +77,8 @@ class SYCL {
   /// \brief Free any resources being consumed by the device.
   static void impl_finalize();
 
-  static void impl_initialize(sycl::device d);
+  sycl::device m_device;
+  static void impl_initialize(const sycl::device_selector& selector);
 
   int sycl_device() const;
 

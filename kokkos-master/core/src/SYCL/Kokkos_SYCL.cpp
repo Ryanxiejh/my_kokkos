@@ -58,8 +58,9 @@ int SYCL::sycl_device() const {
   return impl_internal_space_instance()->m_syclDev;
 }
 
-void SYCL::impl_initialize(sycl::device d) {
-  Impl::SYCLInternal::singleton().initialize(d);
+void SYCL::impl_initialize(const cl::sycl::device_selector& selector) {
+  m_device = selector.select_device();
+  Impl::SYCLInternal::singleton().initialize(m_device);
 }
 
 namespace Impl {
