@@ -56,7 +56,6 @@ void SYCLInternal::initialize(const sycl::device& d) {
   const bool ok_dev  = true;
   if (ok_init && ok_dev) {
     m_queue = std::make_unique<sycl::queue>(d);
-    std::cout << SYCL::SYCLDevice(d) << '\n';
   } else {
     std::ostringstream msg;
     msg << "Kokkos::SYCL::initialize(...) FAILED";
