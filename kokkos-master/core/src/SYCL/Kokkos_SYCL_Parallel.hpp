@@ -31,14 +31,14 @@ private:
         const Kokkos::SYCL& space = policy.space();
         Kokkos::Impl::SYCLInternal& instance =
                 *space.impl_internal_space_instance();
-        cl::sycl::queue& q = *instance.m_queue;
+        sycl::queue& q = *instance.m_queue;
 
         q.wait();
 
-        q.submit([functor, policy](cl::sycl::handler& cgh) {
-            cl::sycl::range<1> range(policy.end() - policy.begin());
+        q.submit([functor, policy](sycl::handler& cgh) {
+            sycl::range<1> range(policy.end() - policy.begin());
 
-            cgh.parallel_for(range, [=](cl::sycl::item<1> item) {
+            cgh.parallel_for(range, [=](sycl::item<1> item) {
                 const typename Policy::index_type id =
                         static_cast<typename Policy::index_type>(item.get_linear_id()) +
                         policy.begin();
@@ -78,6 +78,8 @@ public:
     ParallelFor(const FunctorType& arg_functor, const Policy& arg_policy)
             : m_functor(arg_functor), m_policy(arg_policy) {}
 };
+
+
 
 }   //namespace Impl
 }   //namespace Kokkos

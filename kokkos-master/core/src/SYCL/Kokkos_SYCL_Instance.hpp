@@ -27,7 +27,7 @@ class SYCLInternal {
   size_type* m_scratchSpace = nullptr;
   size_type* m_scratchFlags = nullptr;
 
-  std::unique_ptr<cl::sycl::queue> m_queue;
+  std::unique_ptr<sycl::queue> m_queue;
 
   static int was_finalized;
 
@@ -35,7 +35,7 @@ class SYCLInternal {
 
   int verify_is_initialized(const char* const label) const;
 
-  void initialize(const cl::sycl::device& d);
+  void initialize(const sycl::device& d);
 
   int is_initialized() const { return m_queue != nullptr; }
 

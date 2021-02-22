@@ -14,7 +14,7 @@
 namespace Kokkos {
 namespace Impl {
 namespace {
-auto USM_memcpy(cl::sycl::queue& q, void* dst, const void* src, size_t n) {
+auto USM_memcpy(sycl::queue& q, void* dst, const void* src, size_t n) {
   return q.memcpy(dst, src, n);
 }
 
@@ -123,9 +123,9 @@ void* SYCLSpace::impl_allocate(
     const char* arg_label, const size_t arg_alloc_size,
     const size_t arg_logical_size,
     const Kokkos::Tools::SpaceHandle arg_handle) const {
-  const cl::sycl::queue& queue =
+  const sycl::queue& queue =
       *SYCL().impl_internal_space_instance()->m_queue;
-  void* const hostPtr = cl::sycl::malloc_device(arg_alloc_size, queue);
+  void* const hostPtr = sycl::malloc_device(arg_alloc_size, queue);
 
   if (hostPtr == nullptr)
     throw Experimental::RawMemoryAllocationFailure(
@@ -162,9 +162,9 @@ void SYCLSpace::impl_deallocate(
     Kokkos::Profiling::deallocateData(arg_handle, arg_label, arg_alloc_ptr,
                                       reported_size);
   }
-  const cl::sycl::queue& queue =
+  const sycl::queue& queue =
       *SYCL().impl_internal_space_instance()->m_queue;
-  cl::sycl::free(arg_alloc_ptr, queue);
+  sycl::free(arg_alloc_ptr, queue);
 }
 
 }  // namespace Kokkos
