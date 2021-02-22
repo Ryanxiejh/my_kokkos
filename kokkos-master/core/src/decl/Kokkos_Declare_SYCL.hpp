@@ -47,6 +47,7 @@
 
 #if defined(KOKKOS_ENABLE_SYCL)
 #include <Kokkos_SYCL.hpp>
+#include <SYCL/Kokkos_SYCL_IterateTile.hpp>
 #include <SYCL/Kokkos_SYCL_Parallel.hpp>
 #endif
 
