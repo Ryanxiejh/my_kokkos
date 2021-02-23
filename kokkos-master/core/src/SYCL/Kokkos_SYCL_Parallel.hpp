@@ -422,7 +422,7 @@ private:
 };
 
 //----------------------------------------------------------------------------
-/* ParallelReduce with Kokkos::SYCL and RangePolicy */
+/* ParallelReduce with Kokkos::SYCL and MDRPolicy */
 template <class FunctorType, class ReducerType, class... Traits>
 class ParallelReduce<FunctorType, Kokkos::MDRangePolicy<Traits...>, ReducerType, Kokkos::SYCL> {
 public:
@@ -646,6 +646,146 @@ private:
     Policy m_policy;
     ReducerType m_reducer;
     pointer_type m_result_ptr;
+};
+//----------------------------------------------------------------------------
+
+//----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
+/* ParallelScan with Kokkos::SYCL and RangePolicy */
+template <class FunctorType, class... Traits>
+class ParallelScan<FunctorType, Kokkos::RangePolicy<Traits...>, Kokkos::SYCL> {
+private:
+    using Policy      = Kokkos::RangePolicy<Traits...>;
+    using WorkRange   = typename Policy::WorkRange;
+    using WorkTag     = typename Policy::work_tag;
+    using Member      = typename Policy::member_type;
+    using ValueTraits = Kokkos::Impl::FunctorValueTraits<FunctorType, WorkTag>;
+    using ValueInit   = Kokkos::Impl::FunctorValueInit<FunctorType, WorkTag>;
+    using ValueOps    = Kokkos::Impl::FunctorValueOps<FunctorType, WorkTag>;
+
+    using pointer_type   = typename ValueTraits::pointer_type;
+    using value_type = typename ValueTraits::value_type;
+    using reference_type = typename ValueTraits::reference_type;
+
+
+public:
+    ParallelScan(const FunctorType& f, const Policy& p)
+            : m_functor(f),
+              m_policy(p) {}
+
+    template <typename PolicyType, typename Functor>
+    void sycl_direct_launch(const PolicyType& policy,
+                            const Functor& functor) const {
+        // Convenience references
+        const Kokkos::SYCL& space = policy.space();
+        Kokkos::Impl::SYCLInternal& instance =
+                *space.impl_internal_space_instance();
+        cl::sycl::queue& q = *instance.m_queue;
+
+        const std::size_t len = m_policy.end() - m_policy.begin();
+        auto first_round_result = static_cast<pointer_type>(
+                sycl::malloc(sizeof(value_type) * len, q, sycl::usm::alloc::shared));
+
+        q.submit([&](cl::sycl::handler& cgh) {
+            cgh.parallel_for(sycl::range<1>(len), [=](sycl::item<1> item) {
+                const typename Policy::index_type id =
+                        static_cast<typename Policy::index_type>(item.get_id()) +
+                        policy.begin();
+                value_type update{};
+                ValueInit::init(functor, &update);
+                if constexpr (std::is_same<WorkTag, void>::value)
+                    functor(id, update, false);
+                else
+                    functor(WorkTag(), id, update, false);
+                ValueOps::copy(functor, &first_round_result[id-policy.begin()], &update);
+            });
+        });
+
+        q.wait();
+
+        q.submit([&](cl::sycl::handler& cgh) {
+            cgh.parallel_for(sycl::range<1>(len), [=](sycl::item<1> item) {
+                const typename Policy::index_type id =
+                        static_cast<typename Policy::index_type>(item.get_id()) +
+                        policy.begin();
+//                value_type update{};
+//                ValueInit::init(functor, &update);
+                if constexpr (std::is_same<WorkTag, void>::value)
+                    functor(id, first_round_result[id-policy.begin()], true);
+                else
+                    functor(WorkTag(), id, first_round_result[id-policy.begin()], true);
+                //ValueOps::copy(functor, &first_round_result[id-policy.begin()], &update);
+            });
+        });
+
+        q.wait();
+
+
+        sycl::free(first_round_result, q);
+    }
+
+    template <typename Functor>
+    void sycl_indirect_launch(const Functor& functor) const {
+        std::cout << "sycl_indirect_launch !!!" << std::endl;
+        const sycl::queue& queue = *(m_policy.space().impl_internal_space_instance()->m_queue);
+        auto usm_functor_ptr = sycl::malloc_shared(sizeof(functor),queue);
+        new (usm_functor_ptr) Functor(functor);
+        //auto kernelFunctor = ExtendedReferenceWrapper<Functor>(*static_cast<Functor*>(usm_functor_ptr));
+        auto kernelFunctor = std::reference_wrapper<Functor>(*static_cast<Functor*>(usm_functor_ptr));
+        sycl_direct_launch(m_policy, kernelFunctor);
+        sycl::free(usm_functor_ptr,queue);
+    }
+
+public:
+    void execute() const {
+        if (m_policy.begin() == m_policy.end()) {
+            const Kokkos::SYCL& space = m_policy.space();
+            Kokkos::Impl::SYCLInternal& instance =
+                    *space.impl_internal_space_instance();
+            cl::sycl::queue& q = *instance.m_queue;
+
+            pointer_type result_ptr =
+                    ReduceFunctorHasFinal<FunctorType>::value
+                    ? static_cast<pointer_type>(sycl::malloc(
+                            sizeof(*m_result_ptr), q, sycl::usm::alloc::shared))
+                    : m_result_ptr;
+
+            sycl::usm::alloc result_ptr_type =
+                    sycl::get_pointer_type(result_ptr, q.get_context());
+
+            switch (result_ptr_type) {
+                case sycl::usm::alloc::host:
+                case sycl::usm::alloc::shared:
+                    ValueInit::init(m_functor, result_ptr);
+                    break;
+                case sycl::usm::alloc::device:
+                    // non-USM-allocated memory
+                case sycl::usm::alloc::unknown: {
+                    value_type host_result;
+                    ValueInit::init(m_functor, &host_result);
+                    q.memcpy(result_ptr, &host_result, sizeof(host_result)).wait();
+                    break;
+                }
+                default: Kokkos::abort("pointer type outside of SYCL specs.");
+            }
+
+            if constexpr (ReduceFunctorHasFinal<FunctorType>::value) {
+                FunctorFinal<FunctorType, WorkTag>::final(m_functor, result_ptr);
+                sycl::free(result_ptr, q);
+            }
+
+            return;
+        }
+
+        if constexpr (std::is_trivially_copyable_v<decltype(m_functor)>)
+            sycl_direct_launch(m_policy, m_functor);
+        else
+            sycl_indirect_launch(m_functor);
+    }
+
+private:
+    FunctorType m_functor;
+    Policy m_policy;
 };
 
 }   //namespace Impl
