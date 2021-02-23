@@ -738,44 +738,6 @@ public:
 
 public:
     void execute() const {
-        if (m_policy.begin() == m_policy.end()) {
-            const Kokkos::SYCL& space = m_policy.space();
-            Kokkos::Impl::SYCLInternal& instance =
-                    *space.impl_internal_space_instance();
-            cl::sycl::queue& q = *instance.m_queue;
-
-            pointer_type result_ptr =
-                    ReduceFunctorHasFinal<FunctorType>::value
-                    ? static_cast<pointer_type>(sycl::malloc(
-                            sizeof(*m_result_ptr), q, sycl::usm::alloc::shared))
-                    : m_result_ptr;
-
-            sycl::usm::alloc result_ptr_type =
-                    sycl::get_pointer_type(result_ptr, q.get_context());
-
-            switch (result_ptr_type) {
-                case sycl::usm::alloc::host:
-                case sycl::usm::alloc::shared:
-                    ValueInit::init(m_functor, result_ptr);
-                    break;
-                case sycl::usm::alloc::device:
-                    // non-USM-allocated memory
-                case sycl::usm::alloc::unknown: {
-                    value_type host_result;
-                    ValueInit::init(m_functor, &host_result);
-                    q.memcpy(result_ptr, &host_result, sizeof(host_result)).wait();
-                    break;
-                }
-                default: Kokkos::abort("pointer type outside of SYCL specs.");
-            }
-
-            if constexpr (ReduceFunctorHasFinal<FunctorType>::value) {
-                FunctorFinal<FunctorType, WorkTag>::final(m_functor, result_ptr);
-                sycl::free(result_ptr, q);
-            }
-
-            return;
-        }
 
         if constexpr (std::is_trivially_copyable_v<decltype(m_functor)>)
             sycl_direct_launch(m_policy, m_functor);
