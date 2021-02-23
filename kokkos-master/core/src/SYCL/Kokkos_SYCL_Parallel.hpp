@@ -661,6 +661,7 @@ private:
     using Member      = typename Policy::member_type;
     using ValueTraits = Kokkos::Impl::FunctorValueTraits<FunctorType, WorkTag>;
     using ValueInit   = Kokkos::Impl::FunctorValueInit<FunctorType, WorkTag>;
+    using ValueJoin   = Kokkos::Impl::FunctorValueJoin<FunctorType, WorkTag>;
     using ValueOps    = Kokkos::Impl::FunctorValueOps<FunctorType, WorkTag>;
 
     using pointer_type   = typename ValueTraits::pointer_type;
@@ -684,7 +685,7 @@ public:
 
         const std::size_t len = m_policy.end() - m_policy.begin();
         auto first_round_result = static_cast<pointer_type>(
-                sycl::malloc(sizeof(value_type) * len, q, sycl::usm::alloc::shared));
+                sycl::malloc(sizeof(value_type) * (len+1), q, sycl::usm::alloc::shared));
 
         q.submit([&](cl::sycl::handler& cgh) {
             cgh.parallel_for(sycl::range<1>(len), [=](sycl::item<1> item) {
@@ -697,11 +698,22 @@ public:
                     functor(id, update, false);
                 else
                     functor(WorkTag(), id, update, false);
-                ValueOps::copy(functor, &first_round_result[id-policy.begin()], &update);
+                ValueOps::copy(functor, &first_round_result[id-policy.begin()+1], &update);
             });
         });
 
         q.wait();
+
+        ValueInit::init(functor, &first_round_result[0]);
+        for(std::size_t i = 1; i < len+1 ; i++) {
+            ValueJoin::join(functor, first_round_result[i], first_round_result[i - 1]);
+        }
+        std::cout << "first five value of first_round_result: "
+                << first_round_result[0] << " "
+                << first_round_result[1] << " "
+                << first_round_result[2] << " "
+                << first_round_result[3] << " "
+                << first_round_result[4] << std::endl;
 
         q.submit([&](cl::sycl::handler& cgh) {
             cgh.parallel_for(sycl::range<1>(len), [=](sycl::item<1> item) {
