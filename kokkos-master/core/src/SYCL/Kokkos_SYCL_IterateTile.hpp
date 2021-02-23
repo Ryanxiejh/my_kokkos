@@ -1522,8 +1522,8 @@ private:
     const point_type& m_extent;
     ValueType& m_v;
 };
-
 //----------------------------------------------------------------------------
+
 
 //----------------------------------------------------------------------------
 template <typename RP, typename Functor, typename Tag,
