@@ -763,7 +763,7 @@ private:
 };
 
 template <class FunctorType, class ReturnType, class... Traits>
-class ParallelScanWithTotal<FunctorType, ReturnType, Kokkos::RangePolicy<Traits...>, Kokkos::SYCL> {
+class ParallelScanWithTotal<FunctorType, Kokkos::RangePolicy<Traits...>, ReturnType, Kokkos::SYCL> {
 private:
     using Policy      = Kokkos::RangePolicy<Traits...>;
     using WorkRange   = typename Policy::WorkRange;
