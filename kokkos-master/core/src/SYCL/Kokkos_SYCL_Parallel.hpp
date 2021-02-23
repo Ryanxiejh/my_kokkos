@@ -762,6 +762,121 @@ private:
     Policy m_policy;
 };
 
+template <class FunctorType, class ReturnType, class... Traits>
+class ParallelScanWithTotal<FunctorType, ReturnType, Kokkos::RangePolicy<Traits...>, Kokkos::SYCL> {
+private:
+    using Policy      = Kokkos::RangePolicy<Traits...>;
+    using WorkRange   = typename Policy::WorkRange;
+    using WorkTag     = typename Policy::work_tag;
+    using Member      = typename Policy::member_type;
+    using ValueTraits = Kokkos::Impl::FunctorValueTraits<FunctorType, WorkTag>;
+    using ValueInit   = Kokkos::Impl::FunctorValueInit<FunctorType, WorkTag>;
+    using ValueJoin   = Kokkos::Impl::FunctorValueJoin<FunctorType, WorkTag>;
+    using ValueOps    = Kokkos::Impl::FunctorValueOps<FunctorType, WorkTag>;
+
+    using pointer_type   = typename ValueTraits::pointer_type;
+    using value_type = typename ValueTraits::value_type;
+    using reference_type = typename ValueTraits::reference_type;
+
+
+public:
+    ParallelScanWithTotal(const FunctorType& f, const Policy& p, ReturnType& arg_returnvalue)
+            : m_functor(f),
+              m_policy(p),
+              m_returnvalue(arg_returnvalue) {}
+
+    template <typename PolicyType, typename Functor>
+    void sycl_direct_launch(const PolicyType& policy,
+                            const Functor& functor) const {
+        // Convenience references
+        const Kokkos::SYCL& space = policy.space();
+        Kokkos::Impl::SYCLInternal& instance =
+                *space.impl_internal_space_instance();
+        cl::sycl::queue& q = *instance.m_queue;
+
+        const std::size_t len = m_policy.end() - m_policy.begin();
+        auto first_round_result = static_cast<pointer_type>(
+                sycl::malloc(sizeof(value_type) * (len+1), q, sycl::usm::alloc::shared));
+
+        q.submit([&](cl::sycl::handler& cgh) {
+            cgh.parallel_for(sycl::range<1>(len), [=](sycl::item<1> item) {
+                const typename Policy::index_type id =
+                        static_cast<typename Policy::index_type>(item.get_id()) +
+                        policy.begin();
+                value_type update{};
+                ValueInit::init(functor, &update);
+                if constexpr (std::is_same<WorkTag, void>::value)
+                    functor(id, update, false);
+                else
+                    functor(WorkTag(), id, update, false);
+                ValueOps::copy(functor, &first_round_result[id-policy.begin()+1], &update);
+            });
+        });
+
+        q.wait();
+
+        ValueInit::init(functor, &first_round_result[0]);
+        for(std::size_t i = 1; i < len+1 ; i++) {
+            ValueJoin::join(functor, &first_round_result[i], &first_round_result[i - 1]);
+        }
+        std::cout << "first five value of first_round_result: "
+                << first_round_result[0] << " "
+                << first_round_result[1] << " "
+                << first_round_result[2] << " "
+                << first_round_result[3] << " "
+                << first_round_result[4] << std::endl;
+
+        q.submit([&](cl::sycl::handler& cgh) {
+            cgh.parallel_for(sycl::range<1>(len), [=](sycl::item<1> item) {
+                const typename Policy::index_type id =
+                        static_cast<typename Policy::index_type>(item.get_id()) +
+                        policy.begin();
+//                value_type update{};
+//                ValueInit::init(functor, &update);
+                if constexpr (std::is_same<WorkTag, void>::value)
+                    functor(id, first_round_result[id-policy.begin()], true);
+                else
+                    functor(WorkTag(), id, first_round_result[id-policy.begin()], true);
+                //ValueOps::copy(functor, &first_round_result[id-policy.begin()], &update);
+            });
+        });
+
+        q.wait();
+
+        const int size = ValueTraits::value_size(m_functor);
+        DeepCopy<HostSpace, Kokkos::SYCLSpace>(
+                &m_returnvalue, &first_round_result[len-1], size);
+
+        sycl::free(first_round_result, q);
+    }
+
+    template <typename Functor>
+    void sycl_indirect_launch(const Functor& functor) const {
+        std::cout << "sycl_indirect_launch !!!" << std::endl;
+        const sycl::queue& queue = *(m_policy.space().impl_internal_space_instance()->m_queue);
+        auto usm_functor_ptr = sycl::malloc_shared(sizeof(functor),queue);
+        new (usm_functor_ptr) Functor(functor);
+        //auto kernelFunctor = ExtendedReferenceWrapper<Functor>(*static_cast<Functor*>(usm_functor_ptr));
+        auto kernelFunctor = std::reference_wrapper<Functor>(*static_cast<Functor*>(usm_functor_ptr));
+        sycl_direct_launch(m_policy, kernelFunctor);
+        sycl::free(usm_functor_ptr,queue);
+    }
+
+public:
+    void execute() const {
+
+        if constexpr (std::is_trivially_copyable_v<decltype(m_functor)>)
+            sycl_direct_launch(m_policy, m_functor);
+        else
+            sycl_indirect_launch(m_functor);
+    }
+
+private:
+    FunctorType m_functor;
+    Policy m_policy;
+    ReturnType& m_returnvalue;
+};
+
 //template <class FunctorType, class... Traits>
 //class ParallelScanSYCLBase {
 // public:
