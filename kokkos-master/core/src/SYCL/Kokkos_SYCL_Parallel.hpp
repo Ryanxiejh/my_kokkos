@@ -706,7 +706,7 @@ public:
 
         ValueInit::init(functor, &first_round_result[0]);
         for(std::size_t i = 1; i < len+1 ; i++) {
-            ValueJoin::join(functor, first_round_result[i], first_round_result[i - 1]);
+            ValueJoin::join(functor, &first_round_result[i], &first_round_result[i - 1]);
         }
         std::cout << "first five value of first_round_result: "
                 << first_round_result[0] << " "
