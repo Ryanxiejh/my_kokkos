@@ -941,7 +941,7 @@ class ParallelScanSYCLBase {
         new (usm_functor_ptr) Functor(functor);
         //auto kernelFunctor = ExtendedReferenceWrapper<Functor>(*static_cast<Functor*>(usm_functor_ptr));
         auto kernelFunctor = std::reference_wrapper<Functor>(*static_cast<Functor*>(usm_functor_ptr));
-        sycl_direct_launch(m_policy, kernelFunctor);
+        sycl_direct_launch(kernelFunctor);
         sycl::free(usm_functor_ptr,queue);
   }
 
@@ -962,7 +962,7 @@ class ParallelScanSYCLBase {
     m_scratch_space = result_memory.get();
 
     if constexpr (std::is_trivially_copyable_v<decltype(m_functor)>)
-      sycl_direct_launch(m_policy, m_functor);
+      sycl_direct_launch(m_functor);
     else
       sycl_indirect_launch(m_functor);
     post_functor();
