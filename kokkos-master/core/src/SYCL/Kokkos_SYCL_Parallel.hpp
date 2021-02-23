@@ -783,7 +783,7 @@ class ParallelScanSYCLBase {
   using value_type     = typename ValueTraits::value_type;
   using reference_type = typename ValueTraits::reference_type;
   using functor_type   = FunctorType;
-  using size_type      = Kokkos::Experimental::SYCL::size_type;
+  using size_type      = Kokkos::SYCL::size_type;
   using index_type     = typename Policy::index_type;
 
  protected:
@@ -887,8 +887,8 @@ class ParallelScanSYCLBase {
   template <typename Functor>
   void sycl_direct_launch(const Functor& functor) const {
     // Convenience references
-    const Kokkos::Experimental::SYCL& space = m_policy.space();
-    Kokkos::Experimental::Impl::SYCLInternal& instance =
+    const Kokkos::SYCL& space = m_policy.space();
+    Kokkos::Impl::SYCLInternal& instance =
         *space.impl_internal_space_instance();
     cl::sycl::queue& q = *instance.m_queue;
 
@@ -935,24 +935,14 @@ class ParallelScanSYCLBase {
 
   template <typename Functor>
   void sycl_indirect_launch(const Functor& functor) const {
-    // Convenience references
-    const Kokkos::Experimental::SYCL& space = m_policy.space();
-    Kokkos::Experimental::Impl::SYCLInternal& instance =
-        *space.impl_internal_space_instance();
-    Kokkos::Experimental::Impl::SYCLInternal::IndirectKernelMemory& kernelMem =
-        *instance.m_indirectKernel;
-
-    // Allocate USM shared memory for the functor
-    kernelMem.resize(std::max(kernelMem.size(), sizeof(functor)));
-
-    // Placement new a copy of functor into USM shared memory
-    //
-    // Store it in a unique_ptr to call its destructor on scope exit
-    std::unique_ptr<Functor, Kokkos::Impl::destruct_delete> kernelFunctorPtr(
-        new (kernelMem.data()) Functor(functor));
-
-    auto kernelFunctor = std::reference_wrapper(*kernelFunctorPtr);
-    sycl_direct_launch(kernelFunctor);
+        std::cout << "sycl_indirect_launch !!!" << std::endl;
+        const sycl::queue& queue = *(m_policy.space().impl_internal_space_instance()->m_queue);
+        auto usm_functor_ptr = sycl::malloc_shared(sizeof(functor),queue);
+        new (usm_functor_ptr) Functor(functor);
+        //auto kernelFunctor = ExtendedReferenceWrapper<Functor>(*static_cast<Functor*>(usm_functor_ptr));
+        auto kernelFunctor = std::reference_wrapper<Functor>(*static_cast<Functor*>(usm_functor_ptr));
+        sycl_direct_launch(m_policy, kernelFunctor);
+        sycl::free(usm_functor_ptr,queue);
   }
 
  public:
@@ -984,7 +974,7 @@ class ParallelScanSYCLBase {
 
 template <class FunctorType, class... Traits>
 class ParallelScan<FunctorType, Kokkos::RangePolicy<Traits...>,
-                   Kokkos::Experimental::SYCL>
+                   Kokkos::SYCL>
     : private ParallelScanSYCLBase<FunctorType, Traits...> {
  public:
   using Base = ParallelScanSYCLBase<FunctorType, Traits...>;
@@ -1002,7 +992,7 @@ class ParallelScan<FunctorType, Kokkos::RangePolicy<Traits...>,
 
 template <class FunctorType, class ReturnType, class... Traits>
 class ParallelScanWithTotal<FunctorType, Kokkos::RangePolicy<Traits...>,
-                            ReturnType, Kokkos::Experimental::SYCL>
+                            ReturnType, Kokkos::SYCL>
     : private ParallelScanSYCLBase<FunctorType, Traits...> {
  public:
   using Base = ParallelScanSYCLBase<FunctorType, Traits...>;
@@ -1014,7 +1004,7 @@ class ParallelScanWithTotal<FunctorType, Kokkos::RangePolicy<Traits...>,
       const long long nwork = Base::m_policy.end() - Base::m_policy.begin();
       if (nwork > 0) {
         const int size = Base::ValueTraits::value_size(Base::m_functor);
-        DeepCopy<HostSpace, Kokkos::Experimental::SYCLDeviceUSMSpace>(
+        DeepCopy<HostSpace, Kokkos::SYCLSpace>(
             &m_returnvalue, Base::m_scratch_space + nwork - 1, size);
       }
     });
