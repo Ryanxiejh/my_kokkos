@@ -704,7 +704,9 @@ public:
 
         q.wait();
 
-        ValueInit::init(functor, &first_round_result[0]);
+        for(int i = 0; i < len + 1 ; i++){
+            ValueInit::init(functor, &first_round_result[i]);
+        }
         for(std::size_t i = 1; i < len+1 ; i++) {
             ValueJoin::join(functor, &first_round_result[i], &first_round_result[i - 1]);
         }
