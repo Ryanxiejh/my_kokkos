@@ -844,7 +844,7 @@ public:
         q.wait();
 
         const int size = ValueTraits::value_size(m_functor);
-        DeepCopy<HostSpace, Kokkos::SYCLSpace>(
+        DeepCopy<HostSpace, Kokkos::SYCLSpace, Kokkos::SYCL>(
                 &m_returnvalue, &first_round_result[len-1], size);
 
         sycl::free(first_round_result, q);
