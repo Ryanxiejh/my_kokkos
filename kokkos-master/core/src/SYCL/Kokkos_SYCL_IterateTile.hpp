@@ -11,6 +11,107 @@ namespace Impl{
 template <int N, typename RP, typename Functor,typename ValueType, typename Tag>
 struct apply_impl;
 
+// Rank 1
+// Specializations for void tag type parallel_for
+template <typename RP, typename Functor>
+struct apply_impl<1, RP, Functor, void, void> {
+    using index_type = typename RP::index_type;
+    using point_type = typename RP::point_type;
+
+    apply_impl(/*const RP& rp_, */const Functor& f_, const point_type& offset_, const point_type& extent_)
+            : /*m_rp(rp_), */m_func(f_), m_offset(offset_), m_extent(extent_) {}
+
+    inline void exec_range() const {
+
+        for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+            m_func(dim0+m_offset[0]);
+        }
+
+    }  // end exec_range
+
+private:
+    //const RP& m_rp;
+    const Functor& m_func;
+    const point_type& m_offset;
+    const point_type& m_extent;
+};
+
+// Specializations for tag type parallel_for
+template <typename RP, typename Functor, typename Tag>
+struct apply_impl<1, RP, Functor, void, Tag> {
+    using index_type = typename RP::index_type;
+    using point_type = typename RP::point_type;
+
+    apply_impl(/*const RP& rp_, */const Functor& f_, const point_type& offset_, const point_type& extent_)
+            : /*m_rp(rp_), */m_func(f_), m_offset(offset_), m_extent(extent_) {}
+
+    inline void exec_range() const {
+
+        for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+            m_func(Tag(), dim0+m_offset[0]);
+        }
+
+    }  // end exec_range
+
+private:
+    //const RP& m_rp;
+    const Functor& m_func;
+    const point_type& m_offset;
+    const point_type& m_extent;
+};
+
+// Specializations for void tag type parallel_reduce(single value)
+template <typename RP, typename Functor, typename ValueType>
+struct apply_impl<1, RP, Functor, ValueType, void> {
+    using index_type = typename RP::index_type;
+    using point_type = typename RP::point_type;
+    using value_type = ValueType;
+
+    apply_impl(/*const RP& rp_, */const Functor& f_, const point_type& offset_, const point_type& extent_, value_type& v)
+            : /*m_rp(rp_), */m_func(f_), m_offset(offset_), m_extent(extent_), m_v(v) {}
+
+    inline void exec_range() const {
+
+        for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+            m_func(dim0+m_offset[0], m_v);
+        }
+
+    }  // end exec_range
+
+private:
+    //const RP& m_rp;
+    const Functor& m_func;
+    const point_type& m_offset;
+    const point_type& m_extent;
+    ValueType& m_v;
+};
+
+// Specializations for tag type parallel_reduce(single value)
+template <typename RP, typename Functor, typename ValueType, typename Tag>
+struct apply_impl<1, RP, Functor, ValueType, Tag> {
+    using index_type = typename RP::index_type;
+    using point_type = typename RP::point_type;
+    using value_type = ValueType;
+
+    apply_impl(/*const RP& rp_, */const Functor& f_, const point_type& offset_, const point_type& extent_, value_type& v)
+            : /*m_rp(rp_), */m_func(f_), m_offset(offset_), m_extent(extent_), m_v(v) {}
+
+    inline void exec_range() const {
+
+        for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+            m_func(Tag(), dim0+m_offset[0], m_v);
+        }
+
+    }  // end exec_range
+
+private:
+    //const RP& m_rp;
+    const Functor& m_func;
+    const point_type& m_offset;
+    const point_type& m_extent;
+    ValueType& m_v;
+};
+
 // Rank 2
 // Specializations for void tag type parallel_for
 template <typename RP, typename Functor>
@@ -146,6 +247,1268 @@ struct apply_impl<2, RP, Functor, ValueType, Tag> {
             for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
                 for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
                     m_func(Tag(),dim0+m_offset[0],dim1+m_offset[1],m_v);
+                }
+            }
+        }
+
+    }  // end exec_range
+
+private:
+    //const RP& m_rp;
+    const Functor& m_func;
+    const point_type& m_offset;
+    const point_type& m_extent;
+    ValueType& m_v;
+};
+
+// Rank 3
+// Specializations for void tag type parallel_for
+template <typename RP, typename Functor>
+struct apply_impl<3, RP, Functor, void, void> {
+    using index_type = typename RP::index_type;
+    using point_type = typename RP::point_type;
+
+    apply_impl(/*const RP& rp_, */const Functor& f_, const point_type& offset_, const point_type& extent_)
+            : /*m_rp(rp_), */m_func(f_), m_offset(offset_), m_extent(extent_) {}
+
+    inline void exec_range() const {
+        // LL
+        if (RP::inner_direction == RP::Left) {
+            for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                    for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                        m_func(dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2]);
+                    }
+                }
+            }
+        }
+            // LR
+        else {
+            for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                    for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                        m_func(dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2]);
+                    }
+                }
+            }
+        }
+
+    }  // end exec_range
+
+private:
+    //const RP& m_rp;
+    const Functor& m_func;
+    const point_type& m_offset;
+    const point_type& m_extent;
+};
+
+// Specializations for tag type parallel_for
+template <typename RP, typename Functor, typename Tag>
+struct apply_impl<3, RP, Functor, void, Tag> {
+    using index_type = typename RP::index_type;
+    using point_type = typename RP::point_type;
+
+    apply_impl(/*const RP& rp_, */const Functor& f_, const point_type& offset_, const point_type& extent_)
+            : /*m_rp(rp_), */m_func(f_), m_offset(offset_), m_extent(extent_) {}
+
+    inline void exec_range() const {
+        // LL
+        if (RP::inner_direction == RP::Left) {
+            for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                    for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                        m_func(Tag(), dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2]);
+                    }
+                }
+            }
+        }
+            // LR
+        else {
+            for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                    for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                        m_func(Tag(), dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2]);
+                    }
+                }
+            }
+        }
+
+    }  // end exec_range
+
+private:
+    //const RP& m_rp;
+    const Functor& m_func;
+    const point_type& m_offset;
+    const point_type& m_extent;
+};
+
+// Specializations for void tag type parallel_reduce(single value)
+template <typename RP, typename Functor, typename ValueType>
+struct apply_impl<3, RP, Functor, ValueType, void> {
+    using index_type = typename RP::index_type;
+    using point_type = typename RP::point_type;
+    using value_type = ValueType;
+
+    apply_impl(/*const RP& rp_, */const Functor& f_, const point_type& offset_, const point_type& extent_, value_type& v)
+            : /*m_rp(rp_), */m_func(f_), m_offset(offset_), m_extent(extent_), m_v(v) {}
+
+    inline void exec_range() const {
+        // LL
+        if (RP::inner_direction == RP::Left) {
+            for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                    for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                        m_func(dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], m_v);
+                    }
+                }
+            }
+        }
+            // LR
+        else {
+            for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                    for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                        m_func(dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], m_v);
+                    }
+                }
+            }
+        }
+
+    }  // end exec_range
+
+private:
+    //const RP& m_rp;
+    const Functor& m_func;
+    const point_type& m_offset;
+    const point_type& m_extent;
+    ValueType& m_v;
+};
+
+// Specializations for tag type parallel_reduce(single value)
+template <typename RP, typename Functor, typename ValueType, typename Tag>
+struct apply_impl<3, RP, Functor, ValueType, Tag> {
+    using index_type = typename RP::index_type;
+    using point_type = typename RP::point_type;
+    using value_type = ValueType;
+
+    apply_impl(/*const RP& rp_, */const Functor& f_, const point_type& offset_, const point_type& extent_, value_type& v)
+            : /*m_rp(rp_), */m_func(f_), m_offset(offset_), m_extent(extent_), m_v(v) {}
+
+    inline void exec_range() const {
+        // LL
+        if (RP::inner_direction == RP::Left) {
+            for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                    for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                        m_func(Tag(), dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], m_v);
+                    }
+                }
+            }
+        }
+            // LR
+        else {
+            for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                    for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                        m_func(Tag(), dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], m_v);
+                    }
+                }
+            }
+        }
+
+    }  // end exec_range
+
+private:
+    //const RP& m_rp;
+    const Functor& m_func;
+    const point_type& m_offset;
+    const point_type& m_extent;
+    ValueType& m_v;
+};
+
+// Rank 4
+// Specializations for void tag type parallel_for
+template <typename RP, typename Functor>
+struct apply_impl<4, RP, Functor, void, void> {
+    using index_type = typename RP::index_type;
+    using point_type = typename RP::point_type;
+
+    apply_impl(/*const RP& rp_, */const Functor& f_, const point_type& offset_, const point_type& extent_)
+            : /*m_rp(rp_), */m_func(f_), m_offset(offset_), m_extent(extent_) {}
+
+    inline void exec_range() const {
+        // LL
+        if (RP::inner_direction == RP::Left) {
+            for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                    for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                        for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                            m_func(dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3]);
+                        }
+                    }
+                }
+            }
+        }
+            // LR
+        else {
+            for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                    for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                        for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                            m_func(dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3]);
+                        }
+                    }
+                }
+            }
+        }
+
+    }  // end exec_range
+
+private:
+    //const RP& m_rp;
+    const Functor& m_func;
+    const point_type& m_offset;
+    const point_type& m_extent;
+};
+
+// Specializations for tag type parallel_for
+template <typename RP, typename Functor, typename Tag>
+struct apply_impl<4, RP, Functor, void, Tag> {
+    using index_type = typename RP::index_type;
+    using point_type = typename RP::point_type;
+
+    apply_impl(/*const RP& rp_, */const Functor& f_, const point_type& offset_, const point_type& extent_)
+            : /*m_rp(rp_), */m_func(f_), m_offset(offset_), m_extent(extent_) {}
+
+    inline void exec_range() const {
+        // LL
+        if (RP::inner_direction == RP::Left) {
+            for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                    for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                        for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                            m_func(Tag(), dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3]);
+                        }
+                    }
+                }
+            }
+        }
+            // LR
+        else {
+            for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                    for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                        for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                            m_func(Tag(), dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3]);
+                        }
+                    }
+                }
+            }
+        }
+
+    }  // end exec_range
+
+private:
+    //const RP& m_rp;
+    const Functor& m_func;
+    const point_type& m_offset;
+    const point_type& m_extent;
+};
+
+// Specializations for void tag type parallel_reduce(single value)
+template <typename RP, typename Functor, typename ValueType>
+struct apply_impl<4, RP, Functor, ValueType, void> {
+    using index_type = typename RP::index_type;
+    using point_type = typename RP::point_type;
+    using value_type = ValueType;
+
+    apply_impl(/*const RP& rp_, */const Functor& f_, const point_type& offset_, const point_type& extent_, value_type& v)
+            : /*m_rp(rp_), */m_func(f_), m_offset(offset_), m_extent(extent_), m_v(v) {}
+
+    inline void exec_range() const {
+        // LL
+        if (RP::inner_direction == RP::Left) {
+            for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                    for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                        for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                            m_func(dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3], m_v);
+                        }
+                    }
+                }
+            }
+        }
+            // LR
+        else {
+            for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                    for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                        for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                            m_func(dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3], m_v);
+                        }
+                    }
+                }
+            }
+        }
+
+    }  // end exec_range
+
+private:
+    //const RP& m_rp;
+    const Functor& m_func;
+    const point_type& m_offset;
+    const point_type& m_extent;
+    ValueType& m_v;
+};
+
+// Specializations for tag type parallel_reduce(single value)
+template <typename RP, typename Functor, typename ValueType, typename Tag>
+struct apply_impl<4, RP, Functor, ValueType, Tag> {
+    using index_type = typename RP::index_type;
+    using point_type = typename RP::point_type;
+    using value_type = ValueType;
+
+    apply_impl(/*const RP& rp_, */const Functor& f_, const point_type& offset_, const point_type& extent_, value_type& v)
+            : /*m_rp(rp_), */m_func(f_), m_offset(offset_), m_extent(extent_), m_v(v) {}
+
+    inline void exec_range() const {
+        // LL
+        if (RP::inner_direction == RP::Left) {
+            for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                    for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                        for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                            m_func(Tag(), dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3], m_v);
+                        }
+                    }
+                }
+            }
+        }
+            // LR
+        else {
+            for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                    for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                        for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                            m_func(Tag(), dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3], m_v);
+                        }
+                    }
+                }
+            }
+        }
+
+    }  // end exec_range
+
+private:
+    //const RP& m_rp;
+    const Functor& m_func;
+    const point_type& m_offset;
+    const point_type& m_extent;
+    ValueType& m_v;
+};
+
+// Rank 5
+// Specializations for void tag type parallel_for
+template <typename RP, typename Functor>
+struct apply_impl<5, RP, Functor, void, void> {
+    using index_type = typename RP::index_type;
+    using point_type = typename RP::point_type;
+
+    apply_impl(/*const RP& rp_, */const Functor& f_, const point_type& offset_, const point_type& extent_)
+            : /*m_rp(rp_), */m_func(f_), m_offset(offset_), m_extent(extent_) {}
+
+    inline void exec_range() const {
+        // LL
+        if (RP::inner_direction == RP::Left) {
+            for(index_type dim4 = 0; dim4 < m_extent[4]; dim4++){
+                for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                    for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                        for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                            for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                                m_func(dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3],
+                                       dim4+m_offset[4]);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+            // LR
+        else {
+            for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                    for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                        for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                            for(index_type dim4 = 0; dim4 < m_extent[4]; dim4++){
+                                m_func(dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3],
+                                       dim4+m_offset[4]);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    }  // end exec_range
+
+private:
+    //const RP& m_rp;
+    const Functor& m_func;
+    const point_type& m_offset;
+    const point_type& m_extent;
+};
+
+// Specializations for tag type parallel_for
+template <typename RP, typename Functor, typename Tag>
+struct apply_impl<5, RP, Functor, void, Tag> {
+    using index_type = typename RP::index_type;
+    using point_type = typename RP::point_type;
+
+    apply_impl(/*const RP& rp_, */const Functor& f_, const point_type& offset_, const point_type& extent_)
+            : /*m_rp(rp_), */m_func(f_), m_offset(offset_), m_extent(extent_) {}
+
+    inline void exec_range() const {
+        // LL
+        if (RP::inner_direction == RP::Left) {
+            for(index_type dim4 = 0; dim4 < m_extent[4]; dim4++){
+                for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                    for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                        for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                            for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                                m_func(Tag(), dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3],
+                                       dim4+m_offset[4]);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+            // LR
+        else {
+            for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                    for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                        for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                            for(index_type dim4 = 0; dim4 < m_extent[4]; dim4++){
+                                m_func(Tag(), dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3],
+                                       dim4+m_offset[4]);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    }  // end exec_range
+
+private:
+    //const RP& m_rp;
+    const Functor& m_func;
+    const point_type& m_offset;
+    const point_type& m_extent;
+};
+
+// Specializations for void tag type parallel_reduce(single value)
+template <typename RP, typename Functor, typename ValueType>
+struct apply_impl<5, RP, Functor, ValueType, void> {
+    using index_type = typename RP::index_type;
+    using point_type = typename RP::point_type;
+    using value_type = ValueType;
+
+    apply_impl(/*const RP& rp_, */const Functor& f_, const point_type& offset_, const point_type& extent_, value_type& v)
+            : /*m_rp(rp_), */m_func(f_), m_offset(offset_), m_extent(extent_), m_v(v) {}
+
+    inline void exec_range() const {
+        // LL
+        if (RP::inner_direction == RP::Left) {
+            for(index_type dim4 = 0; dim4 < m_extent[4]; dim4++){
+                for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                    for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                        for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                            for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                                m_func(dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3],
+                                       dim4+m_offset[4], m_v);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+            // LR
+        else {
+            for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                    for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                        for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                            for(index_type dim4 = 0; dim4 < m_extent[4]; dim4++){
+                                m_func(dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3],
+                                       dim4+m_offset[4], m_v);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    }  // end exec_range
+
+private:
+    //const RP& m_rp;
+    const Functor& m_func;
+    const point_type& m_offset;
+    const point_type& m_extent;
+    ValueType& m_v;
+};
+
+// Specializations for tag type parallel_reduce(single value)
+template <typename RP, typename Functor, typename ValueType, typename Tag>
+struct apply_impl<5, RP, Functor, ValueType, Tag> {
+    using index_type = typename RP::index_type;
+    using point_type = typename RP::point_type;
+    using value_type = ValueType;
+
+    apply_impl(/*const RP& rp_, */const Functor& f_, const point_type& offset_, const point_type& extent_, value_type& v)
+            : /*m_rp(rp_), */m_func(f_), m_offset(offset_), m_extent(extent_), m_v(v) {}
+
+    inline void exec_range() const {
+        // LL
+        if (RP::inner_direction == RP::Left) {
+            for(index_type dim4 = 0; dim4 < m_extent[4]; dim4++){
+                for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                    for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                        for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                            for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                                m_func(Tag(), dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3],
+                                       dim4+m_offset[4], m_v);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+            // LR
+        else {
+            for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                    for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                        for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                            for(index_type dim4 = 0; dim4 < m_extent[4]; dim4++){
+                                m_func(Tag(), dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3],
+                                       dim4+m_offset[4], m_v);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    }  // end exec_range
+
+private:
+    //const RP& m_rp;
+    const Functor& m_func;
+    const point_type& m_offset;
+    const point_type& m_extent;
+    ValueType& m_v;
+};
+
+// Rank 6
+// Specializations for void tag type parallel_for
+template <typename RP, typename Functor>
+struct apply_impl<6, RP, Functor, void, void> {
+    using index_type = typename RP::index_type;
+    using point_type = typename RP::point_type;
+
+    apply_impl(/*const RP& rp_, */const Functor& f_, const point_type& offset_, const point_type& extent_)
+            : /*m_rp(rp_), */m_func(f_), m_offset(offset_), m_extent(extent_) {}
+
+    inline void exec_range() const {
+        // LL
+        if (RP::inner_direction == RP::Left) {
+            for(index_type dim5 = 0; dim5 < m_extent[5]; dim5++){
+                for(index_type dim4 = 0; dim4 < m_extent[4]; dim4++){
+                    for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                        for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                            for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                                for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                                    m_func(dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3],
+                                           dim4+m_offset[4], dim5+m_offset[5]);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+            // LR
+        else {
+            for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                    for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                        for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                            for(index_type dim4 = 0; dim4 < m_extent[4]; dim4++){
+                                for(index_type dim5 = 0; dim5 < m_extent[5]; dim5++){
+                                    m_func(dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3],
+                                           dim4+m_offset[4], dim5+m_offset[5]);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    }  // end exec_range
+
+private:
+    //const RP& m_rp;
+    const Functor& m_func;
+    const point_type& m_offset;
+    const point_type& m_extent;
+};
+
+// Specializations for tag type parallel_for
+template <typename RP, typename Functor, typename Tag>
+struct apply_impl<6, RP, Functor, void, Tag> {
+    using index_type = typename RP::index_type;
+    using point_type = typename RP::point_type;
+
+    apply_impl(/*const RP& rp_, */const Functor& f_, const point_type& offset_, const point_type& extent_)
+            : /*m_rp(rp_), */m_func(f_), m_offset(offset_), m_extent(extent_) {}
+
+    inline void exec_range() const {
+        // LL
+        if (RP::inner_direction == RP::Left) {
+            for(index_type dim5 = 0; dim5 < m_extent[5]; dim5++){
+                for(index_type dim4 = 0; dim4 < m_extent[4]; dim4++){
+                    for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                        for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                            for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                                for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                                    m_func(Tag(), dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3],
+                                           dim4+m_offset[4], dim5+m_offset[5]);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+            // LR
+        else {
+            for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                    for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                        for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                            for(index_type dim4 = 0; dim4 < m_extent[4]; dim4++){
+                                for(index_type dim5 = 0; dim5 < m_extent[5]; dim5++){
+                                    m_func(Tag(), dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3],
+                                           dim4+m_offset[4], dim5+m_offset[5]);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    }  // end exec_range
+
+private:
+    //const RP& m_rp;
+    const Functor& m_func;
+    const point_type& m_offset;
+    const point_type& m_extent;
+};
+
+// Specializations for void tag type parallel_reduce(single value)
+template <typename RP, typename Functor, typename ValueType>
+struct apply_impl<6, RP, Functor, ValueType, void> {
+    using index_type = typename RP::index_type;
+    using point_type = typename RP::point_type;
+    using value_type = ValueType;
+
+    apply_impl(/*const RP& rp_, */const Functor& f_, const point_type& offset_, const point_type& extent_, value_type& v)
+            : /*m_rp(rp_), */m_func(f_), m_offset(offset_), m_extent(extent_), m_v(v) {}
+
+    inline void exec_range() const {
+        // LL
+        if (RP::inner_direction == RP::Left) {
+            for(index_type dim5 = 0; dim5 < m_extent[5]; dim5++){
+                for(index_type dim4 = 0; dim4 < m_extent[4]; dim4++){
+                    for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                        for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                            for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                                for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                                    m_func(dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3],
+                                           dim4+m_offset[4], dim5+m_offset[5], m_v);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+            // LR
+        else {
+            for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                    for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                        for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                            for(index_type dim4 = 0; dim4 < m_extent[4]; dim4++){
+                                for(index_type dim5 = 0; dim5 < m_extent[5]; dim5++){
+                                    m_func(dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3],
+                                           dim4+m_offset[4], dim5+m_offset[5], m_v);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    }  // end exec_range
+
+private:
+    //const RP& m_rp;
+    const Functor& m_func;
+    const point_type& m_offset;
+    const point_type& m_extent;
+    ValueType& m_v;
+};
+
+// Specializations for tag type parallel_reduce(single value)
+template <typename RP, typename Functor, typename ValueType, typename Tag>
+struct apply_impl<6, RP, Functor, ValueType, Tag> {
+    using index_type = typename RP::index_type;
+    using point_type = typename RP::point_type;
+    using value_type = ValueType;
+
+    apply_impl(/*const RP& rp_, */const Functor& f_, const point_type& offset_, const point_type& extent_, value_type& v)
+            : /*m_rp(rp_), */m_func(f_), m_offset(offset_), m_extent(extent_), m_v(v) {}
+
+    inline void exec_range() const {
+        // LL
+        if (RP::inner_direction == RP::Left) {
+            for(index_type dim5 = 0; dim5 < m_extent[5]; dim5++){
+                for(index_type dim4 = 0; dim4 < m_extent[4]; dim4++){
+                    for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                        for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                            for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                                for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                                    m_func(Tag(), dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3],
+                                           dim4+m_offset[4], dim5+m_offset[5], m_v);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+            // LR
+        else {
+            for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                    for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                        for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                            for(index_type dim4 = 0; dim4 < m_extent[4]; dim4++){
+                                for(index_type dim5 = 0; dim5 < m_extent[5]; dim5++){
+                                    m_func(Tag(), dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3],
+                                           dim4+m_offset[4], dim5+m_offset[5], m_v);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    }  // end exec_range
+
+private:
+    //const RP& m_rp;
+    const Functor& m_func;
+    const point_type& m_offset;
+    const point_type& m_extent;
+    ValueType& m_v;
+};
+
+// Rank 7
+// Specializations for void tag type parallel_for
+template <typename RP, typename Functor>
+struct apply_impl<7, RP, Functor, void, void> {
+    using index_type = typename RP::index_type;
+    using point_type = typename RP::point_type;
+
+    apply_impl(/*const RP& rp_, */const Functor& f_, const point_type& offset_, const point_type& extent_)
+            : /*m_rp(rp_), */m_func(f_), m_offset(offset_), m_extent(extent_) {}
+
+    inline void exec_range() const {
+        // LL
+        if (RP::inner_direction == RP::Left) {
+            for(index_type dim6 = 0; dim6 < m_extent[6]; dim6++){
+                for(index_type dim5 = 0; dim5 < m_extent[5]; dim5++){
+                    for(index_type dim4 = 0; dim4 < m_extent[4]; dim4++){
+                        for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                            for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                                for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                                    for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                                        m_func(dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3],
+                                               dim4+m_offset[4], dim5+m_offset[5], dim6+m_offset[6]);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+            // LR
+        else {
+            for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                    for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                        for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                            for(index_type dim4 = 0; dim4 < m_extent[4]; dim4++){
+                                for(index_type dim5 = 0; dim5 < m_extent[5]; dim5++){
+                                    for(index_type dim6 = 0; dim6 < m_extent[6]; dim6++){
+                                        m_func(dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3],
+                                               dim4+m_offset[4], dim5+m_offset[5], dim6+m_offset[6]);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    }  // end exec_range
+
+private:
+    //const RP& m_rp;
+    const Functor& m_func;
+    const point_type& m_offset;
+    const point_type& m_extent;
+};
+
+// Specializations for tag type parallel_for
+template <typename RP, typename Functor, typename Tag>
+struct apply_impl<7, RP, Functor, void, Tag> {
+    using index_type = typename RP::index_type;
+    using point_type = typename RP::point_type;
+
+    apply_impl(/*const RP& rp_, */const Functor& f_, const point_type& offset_, const point_type& extent_)
+            : /*m_rp(rp_), */m_func(f_), m_offset(offset_), m_extent(extent_) {}
+
+    inline void exec_range() const {
+        // LL
+        if (RP::inner_direction == RP::Left) {
+            for(index_type dim6 = 0; dim6 < m_extent[6]; dim6++){
+                for(index_type dim5 = 0; dim5 < m_extent[5]; dim5++){
+                    for(index_type dim4 = 0; dim4 < m_extent[4]; dim4++){
+                        for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                            for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                                for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                                    for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                                        m_func(Tag(), dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3],
+                                               dim4+m_offset[4], dim5+m_offset[5], dim6+m_offset[6]);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+            // LR
+        else {
+            for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                    for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                        for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                            for(index_type dim4 = 0; dim4 < m_extent[4]; dim4++){
+                                for(index_type dim5 = 0; dim5 < m_extent[5]; dim5++){
+                                    for(index_type dim6 = 0; dim6 < m_extent[6]; dim6++){
+                                        m_func(Tag(), dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3],
+                                               dim4+m_offset[4], dim5+m_offset[5], dim6+m_offset[6]);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    }  // end exec_range
+
+private:
+    //const RP& m_rp;
+    const Functor& m_func;
+    const point_type& m_offset;
+    const point_type& m_extent;
+};
+
+// Specializations for void tag type parallel_reduce(single value)
+template <typename RP, typename Functor, typename ValueType>
+struct apply_impl<7, RP, Functor, ValueType, void> {
+    using index_type = typename RP::index_type;
+    using point_type = typename RP::point_type;
+    using value_type = ValueType;
+
+    apply_impl(/*const RP& rp_, */const Functor& f_, const point_type& offset_, const point_type& extent_, value_type& v)
+            : /*m_rp(rp_), */m_func(f_), m_offset(offset_), m_extent(extent_), m_v(v) {}
+
+    inline void exec_range() const {
+        // LL
+        if (RP::inner_direction == RP::Left) {
+            for(index_type dim6 = 0; dim6 < m_extent[6]; dim6++){
+                for(index_type dim5 = 0; dim5 < m_extent[5]; dim5++){
+                    for(index_type dim4 = 0; dim4 < m_extent[4]; dim4++){
+                        for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                            for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                                for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                                    for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                                        m_func(dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3],
+                                               dim4+m_offset[4], dim5+m_offset[5], dim6+m_offset[6], m_v);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+            // LR
+        else {
+            for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                    for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                        for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                            for(index_type dim4 = 0; dim4 < m_extent[4]; dim4++){
+                                for(index_type dim5 = 0; dim5 < m_extent[5]; dim5++){
+                                    for(index_type dim6 = 0; dim6 < m_extent[6]; dim6++){
+                                        m_func(dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3],
+                                               dim4+m_offset[4], dim5+m_offset[5], dim6+m_offset[6], m_v);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    }  // end exec_range
+
+private:
+    //const RP& m_rp;
+    const Functor& m_func;
+    const point_type& m_offset;
+    const point_type& m_extent;
+    ValueType& m_v;
+};
+
+// Specializations for tag type parallel_reduce(single value)
+template <typename RP, typename Functor, typename ValueType, typename Tag>
+struct apply_impl<7, RP, Functor, ValueType, Tag> {
+    using index_type = typename RP::index_type;
+    using point_type = typename RP::point_type;
+    using value_type = ValueType;
+
+    apply_impl(/*const RP& rp_, */const Functor& f_, const point_type& offset_, const point_type& extent_, value_type& v)
+            : /*m_rp(rp_), */m_func(f_), m_offset(offset_), m_extent(extent_), m_v(v) {}
+
+    inline void exec_range() const {
+        // LL
+        if (RP::inner_direction == RP::Left) {
+            for(index_type dim6 = 0; dim6 < m_extent[6]; dim6++){
+                for(index_type dim5 = 0; dim5 < m_extent[5]; dim5++){
+                    for(index_type dim4 = 0; dim4 < m_extent[4]; dim4++){
+                        for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                            for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                                for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                                    for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                                        m_func(Tag(), dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3],
+                                               dim4+m_offset[4], dim5+m_offset[5], dim6+m_offset[6], m_v);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+            // LR
+        else {
+            for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                    for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                        for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                            for(index_type dim4 = 0; dim4 < m_extent[4]; dim4++){
+                                for(index_type dim5 = 0; dim5 < m_extent[5]; dim5++){
+                                    for(index_type dim6 = 0; dim6 < m_extent[6]; dim6++){
+                                        m_func(Tag(), dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3],
+                                               dim4+m_offset[4], dim5+m_offset[5], dim6+m_offset[6], m_v);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    }  // end exec_range
+
+private:
+    //const RP& m_rp;
+    const Functor& m_func;
+    const point_type& m_offset;
+    const point_type& m_extent;
+    ValueType& m_v;
+};
+
+// Rank 8
+// Specializations for void tag type parallel_for
+template <typename RP, typename Functor>
+struct apply_impl<8, RP, Functor, void, void> {
+    using index_type = typename RP::index_type;
+    using point_type = typename RP::point_type;
+
+    apply_impl(/*const RP& rp_, */const Functor& f_, const point_type& offset_, const point_type& extent_)
+            : /*m_rp(rp_), */m_func(f_), m_offset(offset_), m_extent(extent_) {}
+
+    inline void exec_range() const {
+        // LL
+        if (RP::inner_direction == RP::Left) {
+            for(index_type dim7 = 0; dim7 < m_extent[7]; dim7++){
+                for(index_type dim6 = 0; dim6 < m_extent[6]; dim6++){
+                    for(index_type dim5 = 0; dim5 < m_extent[5]; dim5++){
+                        for(index_type dim4 = 0; dim4 < m_extent[4]; dim4++){
+                            for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                                for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                                    for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                                        for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                                            m_func(dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3],
+                                                   dim4+m_offset[4], dim5+m_offset[5], dim6+m_offset[6], dim7+m_offset[7]);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+            // LR
+        else {
+            for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                    for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                        for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                            for(index_type dim4 = 0; dim4 < m_extent[4]; dim4++){
+                                for(index_type dim5 = 0; dim5 < m_extent[5]; dim5++){
+                                    for(index_type dim6 = 0; dim6 < m_extent[6]; dim6++){
+                                        for(index_type dim7 = 0; dim7 < m_extent[7]; dim7++){
+                                            m_func(dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3],
+                                                   dim4+m_offset[4], dim5+m_offset[5], dim6+m_offset[6], dim7+m_offset[7]);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    }  // end exec_range
+
+private:
+    //const RP& m_rp;
+    const Functor& m_func;
+    const point_type& m_offset;
+    const point_type& m_extent;
+};
+
+// Specializations for tag type parallel_for
+template <typename RP, typename Functor, typename Tag>
+struct apply_impl<8, RP, Functor, void, Tag> {
+    using index_type = typename RP::index_type;
+    using point_type = typename RP::point_type;
+
+    apply_impl(/*const RP& rp_, */const Functor& f_, const point_type& offset_, const point_type& extent_)
+            : /*m_rp(rp_), */m_func(f_), m_offset(offset_), m_extent(extent_) {}
+
+    inline void exec_range() const {
+        // LL
+        if (RP::inner_direction == RP::Left) {
+            for(index_type dim7 = 0; dim7 < m_extent[7]; dim7++){
+                for(index_type dim6 = 0; dim6 < m_extent[6]; dim6++){
+                    for(index_type dim5 = 0; dim5 < m_extent[5]; dim5++){
+                        for(index_type dim4 = 0; dim4 < m_extent[4]; dim4++){
+                            for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                                for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                                    for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                                        for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                                            m_func(Tag(), dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3],
+                                                   dim4+m_offset[4], dim5+m_offset[5], dim6+m_offset[6], dim7+m_offset[7]);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+            // LR
+        else {
+            for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                    for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                        for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                            for(index_type dim4 = 0; dim4 < m_extent[4]; dim4++){
+                                for(index_type dim5 = 0; dim5 < m_extent[5]; dim5++){
+                                    for(index_type dim6 = 0; dim6 < m_extent[6]; dim6++){
+                                        for(index_type dim7 = 0; dim7 < m_extent[7]; dim7++){
+                                            m_func(Tag(), dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3],
+                                                   dim4+m_offset[4], dim5+m_offset[5], dim6+m_offset[6], dim7+m_offset[7]);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    }  // end exec_range
+
+private:
+    //const RP& m_rp;
+    const Functor& m_func;
+    const point_type& m_offset;
+    const point_type& m_extent;
+};
+
+// Specializations for void tag type parallel_reduce(single value)
+template <typename RP, typename Functor, typename ValueType>
+struct apply_impl<8, RP, Functor, ValueType, void> {
+    using index_type = typename RP::index_type;
+    using point_type = typename RP::point_type;
+    using value_type = ValueType;
+
+    apply_impl(/*const RP& rp_, */const Functor& f_, const point_type& offset_, const point_type& extent_, value_type& v)
+            : /*m_rp(rp_), */m_func(f_), m_offset(offset_), m_extent(extent_), m_v(v) {}
+
+    inline void exec_range() const {
+        // LL
+        if (RP::inner_direction == RP::Left) {
+            for(index_type dim7 = 0; dim7 < m_extent[7]; dim7++){
+                for(index_type dim6 = 0; dim6 < m_extent[6]; dim6++){
+                    for(index_type dim5 = 0; dim5 < m_extent[5]; dim5++){
+                        for(index_type dim4 = 0; dim4 < m_extent[4]; dim4++){
+                            for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                                for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                                    for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                                        for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                                            m_func(dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3],
+                                                   dim4+m_offset[4], dim5+m_offset[5], dim6+m_offset[6], dim7+m_offset[7], m_v);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+            // LR
+        else {
+            for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                    for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                        for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                            for(index_type dim4 = 0; dim4 < m_extent[4]; dim4++){
+                                for(index_type dim5 = 0; dim5 < m_extent[5]; dim5++){
+                                    for(index_type dim6 = 0; dim6 < m_extent[6]; dim6++){
+                                        for(index_type dim7 = 0; dim7 < m_extent[7]; dim7++){
+                                            m_func(dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3],
+                                                   dim4+m_offset[4], dim5+m_offset[5], dim6+m_offset[6], dim7+m_offset[7], m_v);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    }  // end exec_range
+
+private:
+    //const RP& m_rp;
+    const Functor& m_func;
+    const point_type& m_offset;
+    const point_type& m_extent;
+    ValueType& m_v;
+};
+
+// Specializations for tag type parallel_reduce(single value)
+template <typename RP, typename Functor, typename ValueType, typename Tag>
+struct apply_impl<8, RP, Functor, ValueType, Tag> {
+    using index_type = typename RP::index_type;
+    using point_type = typename RP::point_type;
+    using value_type = ValueType;
+
+    apply_impl(/*const RP& rp_, */const Functor& f_, const point_type& offset_, const point_type& extent_, value_type& v)
+            : /*m_rp(rp_), */m_func(f_), m_offset(offset_), m_extent(extent_), m_v(v) {}
+
+    inline void exec_range() const {
+        // LL
+        if (RP::inner_direction == RP::Left) {
+            for(index_type dim7 = 0; dim7 < m_extent[7]; dim7++){
+                for(index_type dim6 = 0; dim6 < m_extent[6]; dim6++){
+                    for(index_type dim5 = 0; dim5 < m_extent[5]; dim5++){
+                        for(index_type dim4 = 0; dim4 < m_extent[4]; dim4++){
+                            for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                                for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                                    for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                                        for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                                            m_func(Tag(), dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3],
+                                                   dim4+m_offset[4], dim5+m_offset[5], dim6+m_offset[6], dim7+m_offset[7], m_v);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+            // LR
+        else {
+            for(index_type dim0 = 0; dim0 < m_extent[0]; dim0++){
+                for(index_type dim1 = 0; dim1 < m_extent[1]; dim1++){
+                    for(index_type dim2 = 0; dim2 < m_extent[2]; dim2++){
+                        for(index_type dim3 = 0; dim3 < m_extent[3]; dim3++){
+                            for(index_type dim4 = 0; dim4 < m_extent[4]; dim4++){
+                                for(index_type dim5 = 0; dim5 < m_extent[5]; dim5++){
+                                    for(index_type dim6 = 0; dim6 < m_extent[6]; dim6++){
+                                        for(index_type dim7 = 0; dim7 < m_extent[7]; dim7++){
+                                            m_func(Tag(), dim0+m_offset[0], dim1+m_offset[1], dim2+m_offset[2], dim3+m_offset[3],
+                                                   dim4+m_offset[4], dim5+m_offset[5], dim6+m_offset[6], dim7+m_offset[7], m_v);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
