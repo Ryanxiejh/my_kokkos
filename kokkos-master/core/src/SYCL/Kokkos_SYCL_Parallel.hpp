@@ -698,12 +698,13 @@ public:
                     functor(id, update, false);
                 else
                     functor(WorkTag(), id, update, false);
-                ValueOps::copy(functor, &first_round_result[id-policy.begin()+1], &update);
+                ValueOps::copy(functor, &first_round_result[id-policy.begin()+1], &update); //初始化除[0]外的其他index的值
             });
         });
 
         q.wait();
 
+        ValueInit::init(functor, &first_round_result[0]); //补充初始化[0]
         for(std::size_t i = 1; i < len+1 ; i++) {
             ValueJoin::join(functor, &first_round_result[i], &first_round_result[i - 1]);
         }
