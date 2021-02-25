@@ -147,6 +147,9 @@ private:
     bool m_tune_vector;
 
 public:
+    //! Execution space of this execution policy
+    using execution_space = Kokkos::SYCL;
+
     template <class... OtherProperties>
     TeamPolicyInternal(const TeamPolicyInternal<OtherProperties...>& p) {
         m_league_size            = p.m_league_size;
