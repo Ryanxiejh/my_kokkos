@@ -131,6 +131,7 @@ public:
     //! Tag this class as a kokkos execution policy
     using execution_policy = TeamPolicyInternal;
     using traits = PolicyTraits<Properties...>;
+    using member_type = Kokkos::Impl::SYCLTeamMember;
 
     template <class ExecSpace, class... OtherProperties>
     friend class TeamPolicyInternal;
