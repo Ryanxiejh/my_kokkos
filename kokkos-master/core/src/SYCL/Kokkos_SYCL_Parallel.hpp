@@ -127,7 +127,7 @@ private:
 
         q.submit([=](sycl::handler& cgh) {
             sycl::range<1> range(work_range);
-            sycl::stream out(1024, 256, cgh);
+            //sycl::stream out(1024, 256, cgh);
             cgh.parallel_for(range, [=](cl::sycl::item<1> item) {
                 const typename Policy::index_type id =
                         static_cast<typename Policy::index_type>(item.get_linear_id()) + offset;
@@ -180,6 +180,91 @@ public:
 };
 //----------------------------------------------------------------------------
 
+//----------------------------------------------------------------------------
+/* ParallelFor Kokkos::SYCL with MDRangePolicy */
+template <class FunctorType, class... Traits>
+class ParallelFor<FunctorType, Kokkos::TeamPolicy<Traits...>, Kokkos::SYCL> {
+public:
+    using Policy =
+    Kokkos::Impl::TeamPolicyInternal<Kokkos::SYCL, Properties...>;
+    using WorkTag = typename Policy::work_tag;
+    using Member  = typename Policy::member_type;
+    using size_type    = SYCL::size_type;
+
+private:
+    const FunctorType m_functor;
+    const Policy m_policy;
+    const size_type m_league_size;
+    int m_team_size;
+    const size_type m_vector_size;
+    int m_shmem_size;
+    int m_reduce_size;
+
+public:
+
+    void sycl_direct_launch(const Policy& policy, const Functor& functor) const {
+        // Convenience references
+        const Kokkos::SYCL& space = policy.space();
+        Kokkos::Impl::SYCLInternal& instance =
+                *space.impl_internal_space_instance();
+        cl::sycl::queue& q = *instance.m_queue;
+
+        q.submit([&](cl::sycl::handler& cgh) {
+            cl::sycl::nd_range<1> range(m_league_size * m_team_size, m_team_size);
+            sycl::accessor<char, 1, sycl::access::mode::read_write, sycl::access::target::local>
+                local_mem(m_shmem_size + m_reduce_size, cgh);
+
+            cgh.parallel_for(range, [=](cl::sycl::nd_item<1> item, auto& sum) {
+                void* ptr = local_mem.get_pointer();
+                int group_id = item.get_group_linear_id();
+                int item_id = item.get_local_linear_id();
+                Member member(ptr, m_reduce_size, (char*)ptr+m_reduce_size, m_shmem_size, group_id, m_league_size,
+                              item_id, m_team_size, item);
+                if constexpr (std::is_same<WorkTag, void>::value)
+                    functor(member);
+                else
+                    functor(WorkTag(), member);
+
+            });
+        });
+    }
+
+    //在usm中构造functor
+    void sycl_indirect_launch() const {
+        std::cout << "sycl_indirect_launch !!!" << std::endl;
+        const sycl::queue& queue = *(m_policy.space().impl_internal_space_instance()->m_queue);
+        auto usm_functor_ptr = sycl::malloc_shared(sizeof(FunctorType),queue);
+        new (usm_functor_ptr) FunctorType(m_functor);
+        sycl_direct_launch(m_policy,std::reference_wrapper(*(static_cast<FunctorType*>(usm_functor_ptr))));
+        sycl::free(usm_functor_ptr,queue);
+    }
+
+    void execute() const {
+        if constexpr (std::is_trivially_copyable_v<decltype(m_functor)>)
+            sycl_direct_launch(m_policy, m_functor);
+        else
+            sycl_indirect_launch();
+    }
+
+    ParallelFor(const FunctorType& arg_functor, const Policy& arg_policy)
+        : m_functor(arg_functor),
+          m_policy(arg_policy),
+          m_league_size(arg_policy.league_size()),
+          m_team_size(arg_policy.team_size()),
+          m_vector_size(arg_policy.impl_vector_length()) {
+        m_reduce_size = 100;
+        m_shmem_size = (m_policy.scratch_size(0, m_team_size) + m_policy.scratch_size(1, m_team_size) +
+                        FunctorTeamShmemSize<FunctorType>::value(m_functor, m_team_size));
+        using namespace cl::sycl::info;
+        if(m_reduce_size + m_shmem_size > arg_policy.space().get_device().get_info<device::local_mem_size>()){
+            Kokkos::Impl::throw_runtime_exception(std::string(
+                    "Kokkos::Impl::ParallelFor< SYCL > insufficient shared memory"));
+        }
+
+    }
+
+};
+//----------------------------------------------------------------------------
 
 //----------------------------------------------------------------------------
 //----------------------------------------------------------------------------
