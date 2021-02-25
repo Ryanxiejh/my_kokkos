@@ -133,6 +133,11 @@ public:
     using traits = PolicyTraits<Properties...>;
     using member_type = Kokkos::Impl::SYCLTeamMember;
 
+    const typename traits::execution_space& space() const {
+        static typename traits::execution_space space_;
+        return space_;
+    }
+
     template <class ExecSpace, class... OtherProperties>
     friend class TeamPolicyInternal;
 
@@ -190,7 +195,7 @@ public:
               m_tune_team(bool(team_size_request<=0)),
               m_tune_vector(bool(vector_length_request<=0)) {
         using namespace cl::sycl::info;
-        if(league_size_ > m_space.get_device().template get_info<device::max_work_group_size>()){
+        if(league_size_ > m_space.impl_internal_space_instance->get_device().template get_info<device::max_work_group_size>()){
             Impl::throw_runtime_exception(
                     "Requested too large league_size for TeamPolicy on SYCL execution "
                     "space.");
@@ -274,12 +279,12 @@ public:
     template <class FunctorType>
     int team_size_max(const FunctorType&, const ParallelForTag&) const {
         using namespace cl::sycl::info;
-        return m_space.get_device().template get_info<device::max_work_group_size>();
+        return m_space.impl_internal_space_instance->get_device().template get_info<device::max_work_group_size>();
     }
     template <class FunctorType>
     int team_size_max(const FunctorType&, const ParallelReduceTag&) const {
         using namespace cl::sycl::info;
-        return m_space.get_device().template get_info<device::max_work_group_size>();
+        return m_space.impl_internal_space_instance->get_device().template get_info<device::max_work_group_size>();
     }
     template <class FunctorType, class ReducerType>
     inline int team_size_max(const FunctorType& f, const ReducerType&,

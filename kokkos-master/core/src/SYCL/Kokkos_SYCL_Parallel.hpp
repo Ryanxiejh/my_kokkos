@@ -257,7 +257,8 @@ public:
         m_shmem_size = (m_policy.scratch_size(0, m_team_size) + m_policy.scratch_size(1, m_team_size) +
                         FunctorTeamShmemSize<FunctorType>::value(m_functor, m_team_size));
         using namespace cl::sycl::info;
-        if(m_reduce_size + m_shmem_size > arg_policy.space().get_device().template get_info<device::local_mem_size>()){
+        if(m_reduce_size + m_shmem_size >
+                arg_policy.space().impl_internal_space_instance->get_device().template get_info<device::local_mem_size>()){
             Kokkos::Impl::throw_runtime_exception(std::string(
                     "Kokkos::Impl::ParallelFor< SYCL > insufficient shared memory"));
         }
