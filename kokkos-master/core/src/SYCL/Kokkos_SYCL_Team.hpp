@@ -11,7 +11,7 @@ namespace Impl{
 //----------------------------------------------------------------------------
 class SYCLTeamMember {
 public:
-    using execution_space      = Kokkos::Cuda;
+    using execution_space      = Kokkos::SYCL;
     using scratch_memory_space = execution_space::scratch_memory_space;
 
 private:
@@ -33,7 +33,7 @@ public:
           m_team_shared(shared, shared_size),
           m_team_reduce_size(arg_reduce_size),
           m_league_rank(arg_league_rank),
-          m_league_size(arg_league_sizea),
+          m_league_size(arg_league_size),
           m_team_rank(arg_team_rank),
           m_team_size(arg_team_size),
           m_item(arg_item) {}
@@ -186,7 +186,7 @@ public:
               m_tune_team(bool(team_size_request<=0)),
               m_tune_vector(bool(vector_length_request<=0)) {
         using namespace cl::sycl::info;
-        if(league_size_ > m_space.get_device().get_info<device::max_work_group_size>()){
+        if(league_size_ > m_space.get_device().template get_info<device::max_work_group_size>()){
             Impl::throw_runtime_exception(
                     "Requested too large league_size for TeamPolicy on SYCL execution "
                     "space.");
@@ -269,11 +269,13 @@ public:
 
     template <class FunctorType>
     int team_size_max(const FunctorType&, const ParallelForTag&) const {
-        return m_space.get_device().get_info<device::max_work_group_size>();
+        using namespace cl::sycl::info;
+        return m_space.get_device().template get_info<device::max_work_group_size>();
     }
     template <class FunctorType>
     int team_size_max(const FunctorType&, const ParallelReduceTag&) const {
-        return m_space.get_device().get_info<device::max_work_group_size>();
+        using namespace cl::sycl::info;
+        return m_space.get_device().template get_info<device::max_work_group_size>();
     }
     template <class FunctorType, class ReducerType>
     inline int team_size_max(const FunctorType& f, const ReducerType&,

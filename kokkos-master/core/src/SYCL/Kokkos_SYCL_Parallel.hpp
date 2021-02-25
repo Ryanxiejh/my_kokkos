@@ -186,7 +186,7 @@ template <class FunctorType, class... Traits>
 class ParallelFor<FunctorType, Kokkos::TeamPolicy<Traits...>, Kokkos::SYCL> {
 public:
     using Policy =
-    Kokkos::Impl::TeamPolicyInternal<Kokkos::SYCL, Properties...>;
+    Kokkos::Impl::TeamPolicyInternal<Kokkos::SYCL, Traits...>;
     using WorkTag = typename Policy::work_tag;
     using Member  = typename Policy::member_type;
     using size_type    = SYCL::size_type;
