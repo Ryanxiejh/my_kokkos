@@ -220,7 +220,7 @@ public:
             int shmem_size = m_shmem_size;
             int reduce_size = m_reduce_size;
 
-            cgh.parallel_for(range, [=](cl::sycl::nd_item<1> item, auto& sum) {
+            cgh.parallel_for(range, [=](cl::sycl::nd_item<1> item) {
                 void* ptr = local_mem.get_pointer();
                 int group_id = item.get_group_linear_id();
                 int item_id = item.get_local_linear_id();
