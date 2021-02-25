@@ -215,7 +215,7 @@ public:
             sycl::accessor<char, 1, sycl::access::mode::read_write, sycl::access::target::local>
                 local_mem(m_shmem_size + m_reduce_size, cgh);
 
-            cgh.parallel_for(range, [=](cl::sycl::nd_item<1> item, auto& sum) {
+            cgh.parallel_for(range, [=,this](cl::sycl::nd_item<1> item, auto& sum) {
                 void* ptr = local_mem.get_pointer();
                 int group_id = item.get_group_linear_id();
                 int item_id = item.get_local_linear_id();
@@ -258,7 +258,7 @@ public:
                         FunctorTeamShmemSize<FunctorType>::value(m_functor, m_team_size));
         using namespace cl::sycl::info;
         if(m_reduce_size + m_shmem_size >
-                arg_policy.space().impl_internal_space_instance->get_device().template get_info<device::local_mem_size>()){
+                arg_policy.space().impl_internal_space_instance()->m_queue.get_device().template get_info<device::local_mem_size>()){
             Kokkos::Impl::throw_runtime_exception(std::string(
                     "Kokkos::Impl::ParallelFor< SYCL > insufficient shared memory"));
         }
