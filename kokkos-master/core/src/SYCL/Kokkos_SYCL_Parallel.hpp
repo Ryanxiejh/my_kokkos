@@ -214,13 +214,18 @@ public:
             cl::sycl::nd_range<1> range(m_league_size * m_team_size, m_team_size);
             sycl::accessor<char, 1, sycl::access::mode::read_write, sycl::access::target::local>
                 local_mem(m_shmem_size + m_reduce_size, cgh);
+            const size_type league_size = m_league_size;
+            int team_size = m_team_size;
+            const size_type vector_size = m_vector_size;
+            int shmem_size = m_shmem_size;
+            int reduce_size = m_reduce_size;
 
-            cgh.parallel_for(range, [=,this](cl::sycl::nd_item<1> item, auto& sum) {
+            cgh.parallel_for(range, [=](cl::sycl::nd_item<1> item, auto& sum) {
                 void* ptr = local_mem.get_pointer();
                 int group_id = item.get_group_linear_id();
                 int item_id = item.get_local_linear_id();
-                Member member(ptr, m_reduce_size, (char*)ptr+m_reduce_size, m_shmem_size, group_id, m_league_size,
-                              item_id, m_team_size, item);
+                Member member(ptr, reduce_size, (char*)ptr+reduce_size, shmem_size, group_id, league_size,
+                              item_id, team_size, item);
                 if constexpr (std::is_same<WorkTag, void>::value)
                     functor(member);
                 else
@@ -258,7 +263,7 @@ public:
                         FunctorTeamShmemSize<FunctorType>::value(m_functor, m_team_size));
         using namespace cl::sycl::info;
         if(m_reduce_size + m_shmem_size >
-                arg_policy.space().impl_internal_space_instance()->m_queue.get_device().template get_info<device::local_mem_size>()){
+                arg_policy.space().impl_internal_space_instance()->m_queue->get_device().template get_info<device::local_mem_size>()){
             Kokkos::Impl::throw_runtime_exception(std::string(
                     "Kokkos::Impl::ParallelFor< SYCL > insufficient shared memory"));
         }
