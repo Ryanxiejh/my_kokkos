@@ -804,6 +804,7 @@ public:
 
         const auto reduction = [&]() {
             if constexpr (!std::is_same<ReducerType, InvalidType>::value) {
+                printf("ReducerTyep: InvalidType !!! \n");
                 return cl::sycl::ONEAPI::reduction(
                         result_ptr, identity,
                         [this](value_type& old_value, const value_type& new_value) {
@@ -812,6 +813,7 @@ public:
                         });
             } else {
                 if constexpr (ReduceFunctorHasJoin<Functor>::value) {
+                    printf("ReducerTyep: Functor with Join !!! \n");
                     return cl::sycl::ONEAPI::reduction(
                             result_ptr, identity,
                             [functor](value_type& old_value, const value_type& new_value) {
@@ -819,6 +821,7 @@ public:
                                 return old_value;
                             });
                 } else {
+                    printf("ReducerTyep: Functor without Join !!! \n");
                     return cl::sycl::ONEAPI::reduction(result_ptr, identity,
                                                        std::plus<>());
                 }
