@@ -811,7 +811,8 @@ public:
 //                            m_reducer.join(old_value, new_value);
 //                            return old_value;
 //                        });
-                return cl::sycl::ONEAPI::reduction(result_ptr, std::minus<>());
+                return cl::sycl::ONEAPI::reduction(result_ptr, identity,
+                                                   std::plus<>());
             } else {
                 if constexpr (ReduceFunctorHasJoin<Functor>::value) {
                     printf("ReducerType: Custome Type !!! \n");
