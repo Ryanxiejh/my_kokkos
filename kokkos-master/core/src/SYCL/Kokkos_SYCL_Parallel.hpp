@@ -847,7 +847,7 @@ public:
                     functor(member, partial);
                 else
                     functor(WorkTag(), member, partial);
-
+                sum.combine(partial);
             });
         });
 
