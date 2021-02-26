@@ -827,7 +827,7 @@ public:
 //                    return cl::sycl::ONEAPI::reduction(result_ptr, identity,
 //                                                       std::plus<>());
                     return cl::sycl::ONEAPI::reduction(result_ptr, identity,
-                                                       std::minus<>());
+                                                       std::minus<value_type>());
                 }
             }
         }();
