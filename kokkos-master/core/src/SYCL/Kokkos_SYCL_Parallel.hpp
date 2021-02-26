@@ -839,6 +839,7 @@ public:
             const size_type vector_size = m_vector_size;
             int shmem_size = m_shmem_size;
             int reduce_size = m_reduce_size;
+            sycl::stream out(1024*1024, 256, cgh);
 
             cgh.parallel_for(range, reduction,
                              [=](cl::sycl::nd_item<1> item, auto& sum) {
@@ -853,6 +854,7 @@ public:
                 else
                     functor(WorkTag(), member, partial);
                 sum.combine(partial);
+                out << group_id << " " << partial << cl::sycl::endl;
             });
         });
 
