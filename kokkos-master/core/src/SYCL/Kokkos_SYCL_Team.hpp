@@ -199,7 +199,7 @@ public:
 //            Impl::throw_runtime_exception(
 //                    "Requested too large league_size for TeamPolicy on SYCL execution "
 //                    "space.");
-        }
+//        }
     }
 
     /** \brief  Specify league size, request team size, specify vector length */
