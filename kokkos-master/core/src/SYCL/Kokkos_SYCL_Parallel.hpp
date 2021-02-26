@@ -181,7 +181,7 @@ public:
 //----------------------------------------------------------------------------
 
 //----------------------------------------------------------------------------
-/* ParallelFor Kokkos::SYCL with MDRangePolicy */
+/* ParallelFor Kokkos::SYCL with TeamPolicy */
 template <class FunctorType, class... Traits>
 class ParallelFor<FunctorType, Kokkos::TeamPolicy<Traits...>, Kokkos::SYCL> {
 public:
@@ -233,6 +233,8 @@ public:
 
             });
         });
+
+        q.wait();
     }
 
     //在usm中构造functor
@@ -740,6 +742,196 @@ private:
     pointer_type m_result_ptr;
 };
 //----------------------------------------------------------------------------
+
+//----------------------------------------------------------------------------
+/* ParallelReduce Kokkos::SYCL with TeamPolicy */
+template <class FunctorType,  class ReducerType, class... Traits>
+class ParallelReduce<FunctorType, Kokkos::TeamPolicy<Traits...>, ReducerType, Kokkos::SYCL> {
+public:
+    using Policy = Kokkos::Impl::TeamPolicyInternal<Kokkos::SYCL, Traits...>;
+    using WorkTag = typename Policy::work_tag;
+    using Member  = typename Policy::member_type;
+    using size_type    = SYCL::size_type;
+
+    using ReducerConditional =
+    Kokkos::Impl::if_c<std::is_same<InvalidType, ReducerType>::value,
+            FunctorType, ReducerType>;
+    using ReducerTypeFwd = typename ReducerConditional::type;
+    using WorkTagFwd =
+    typename Kokkos::Impl::if_c<std::is_same<InvalidType, ReducerType>::value,
+            WorkTag, void>::type;
+
+    using ValueTraits =
+    Kokkos::Impl::FunctorValueTraits<ReducerTypeFwd, WorkTagFwd>;
+    using ValueInit = Kokkos::Impl::FunctorValueInit<ReducerTypeFwd, WorkTagFwd>;
+    using ValueJoin = Kokkos::Impl::FunctorValueJoin<ReducerTypeFwd, WorkTagFwd>;
+
+    using pointer_type   = typename ValueTraits::pointer_type;
+    using reference_type = typename ValueTraits::reference_type;
+    using value_type     = typename ValueTraits::value_type;
+
+private:
+    const FunctorType m_functor;
+    const Policy m_policy;
+    ReducerType m_reducer;
+    pointer_type m_result_ptr;
+    const size_type m_league_size;
+    int m_team_size;
+    const size_type m_vector_size;
+    int m_shmem_size;
+    int m_reduce_size;
+
+public:
+
+    template <typename Functor>
+    void sycl_direct_launch(const Policy& policy, const Functor& functor) const {
+        // Convenience references
+        const Kokkos::SYCL& space = policy.space();
+        Kokkos::Impl::SYCLInternal& instance =
+                *space.impl_internal_space_instance();
+        cl::sycl::queue& q = *instance.m_queue;
+
+        auto result_ptr = static_cast<pointer_type>(
+                sycl::malloc(sizeof(*m_result_ptr), q, sycl::usm::alloc::shared));
+
+        value_type identity{};
+        if constexpr (!std::is_same<ReducerType, InvalidType>::value)
+            m_reducer.init(identity);
+
+        *result_ptr = identity;
+        if constexpr (ReduceFunctorHasInit<Functor>::value)
+            ValueInit::init(functor, result_ptr);
+
+        const auto reduction = [&]() {
+            if constexpr (!std::is_same<ReducerType, InvalidType>::value) {
+                return cl::sycl::ONEAPI::reduction(
+                        result_ptr, identity,
+                        [this](value_type& old_value, const value_type& new_value) {
+                            m_reducer.join(old_value, new_value);
+                            return old_value;
+                        });
+            } else {
+                if constexpr (ReduceFunctorHasJoin<Functor>::value) {
+                    return cl::sycl::ONEAPI::reduction(
+                            result_ptr, identity,
+                            [functor](value_type& old_value, const value_type& new_value) {
+                                functor.join(old_value, new_value);
+                                return old_value;
+                            });
+                } else {
+                    return cl::sycl::ONEAPI::reduction(result_ptr, identity,
+                                                       std::plus<>());
+                }
+            }
+        }();
+
+        q.submit([&](cl::sycl::handler& cgh) {
+            cl::sycl::nd_range<1> range(m_league_size * m_team_size, m_team_size);
+            sycl::accessor<char, 1, sycl::access::mode::read_write, sycl::access::target::local>
+                local_mem(m_shmem_size + m_reduce_size, cgh);
+            const size_type league_size = m_league_size;
+            int team_size = m_team_size;
+            const size_type vector_size = m_vector_size;
+            int shmem_size = m_shmem_size;
+            int reduce_size = m_reduce_size;
+
+            cgh.parallel_for(range, reduction,
+                             [=](cl::sycl::nd_item<1> item, auto& sum) {
+                void* ptr = local_mem.get_pointer();
+                int group_id = item.get_group_linear_id();
+                int item_id = item.get_local_linear_id();
+                Member member(ptr, reduce_size, (char*)ptr+reduce_size, shmem_size, group_id, league_size,
+                              item_id, team_size, item);
+                value_type partial = identity;
+                if constexpr (std::is_same<WorkTag, void>::value)
+                    functor(member, partial);
+                else
+                    functor(WorkTag(), member, partial);
+
+            });
+        });
+
+        q.wait();
+
+        static_assert(ReduceFunctorHasFinal<Functor>::value ==
+                      ReduceFunctorHasFinal<FunctorType>::value);
+        static_assert(ReduceFunctorHasJoin<Functor>::value ==
+                      ReduceFunctorHasJoin<FunctorType>::value);
+
+        if constexpr (ReduceFunctorHasFinal<Functor>::value)
+            FunctorFinal<Functor, WorkTag>::final(functor, result_ptr);
+        else
+            *m_result_ptr = *result_ptr;
+
+        sycl::free(result_ptr, q);
+    }
+
+    //在usm中构造functor
+    void sycl_indirect_launch() const {
+        std::cout << "sycl_indirect_launch !!!" << std::endl;
+        const sycl::queue& queue = *(m_policy.space().impl_internal_space_instance()->m_queue);
+        auto usm_functor_ptr = sycl::malloc_shared(sizeof(FunctorType),queue);
+        new (usm_functor_ptr) FunctorType(m_functor);
+        sycl_direct_launch(m_policy,std::reference_wrapper(*(static_cast<FunctorType*>(usm_functor_ptr))));
+        sycl::free(usm_functor_ptr,queue);
+    }
+
+    void execute() const {
+        if constexpr (std::is_trivially_copyable_v<decltype(m_functor)>)
+            sycl_direct_launch(m_policy, m_functor);
+        else
+            sycl_indirect_launch();
+    }
+
+    // V - View
+    template <typename V>
+    ParallelReduce(
+            const FunctorType& arg_functor, const Policy& arg_policy, const V& v,
+            typename std::enable_if<Kokkos::is_view<V>::value, void*>::type = nullptr)
+            : m_functor(arg_functor),
+              m_policy(arg_policy),
+              m_reducer(InvalidType()),
+              m_result_ptr(v.data()),
+              m_league_size(arg_policy.league_size()),
+              m_team_size(arg_policy.team_size()),
+              m_vector_size(arg_policy.impl_vector_length()) {
+        m_reduce_size = 100;
+        m_shmem_size = (m_policy.scratch_size(0, m_team_size) + m_policy.scratch_size(1, m_team_size) +
+                        FunctorTeamShmemSize<FunctorType>::value(m_functor, m_team_size));
+        using namespace cl::sycl::info;
+        if(m_reduce_size + m_shmem_size >
+           arg_policy.space().impl_internal_space_instance()->m_queue->get_device().template get_info<device::local_mem_size>()){
+            Kokkos::Impl::throw_runtime_exception(std::string(
+                    "Kokkos::Impl::ParallelReduce< SYCL > insufficient shared memory"));
+        }
+
+    }
+
+    ParallelReduce(const FunctorType& arg_functor, const Policy& arg_policy,
+                   const ReducerType& reducer)
+            : m_functor(arg_functor),
+              m_policy(arg_policy),
+              m_reducer(reducer),
+              m_result_ptr(reducer.view().data()),
+              m_league_size(arg_policy.league_size()),
+              m_team_size(arg_policy.team_size()),
+              m_vector_size(arg_policy.impl_vector_length()) {
+        m_reduce_size = 100;
+        m_shmem_size = (m_policy.scratch_size(0, m_team_size) + m_policy.scratch_size(1, m_team_size) +
+                        FunctorTeamShmemSize<FunctorType>::value(m_functor, m_team_size));
+        using namespace cl::sycl::info;
+        if(m_reduce_size + m_shmem_size >
+           arg_policy.space().impl_internal_space_instance()->m_queue->get_device().template get_info<device::local_mem_size>()){
+            Kokkos::Impl::throw_runtime_exception(std::string(
+                    "Kokkos::Impl::ParallelReduce< SYCL > insufficient shared memory"));
+        }
+
+    }
+
+};
+//----------------------------------------------------------------------------
+
+
 
 //----------------------------------------------------------------------------
 //----------------------------------------------------------------------------
