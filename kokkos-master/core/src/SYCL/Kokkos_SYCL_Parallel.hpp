@@ -808,7 +808,7 @@ public:
                 return cl::sycl::ONEAPI::reduction(
                         result_ptr, identity,
                         [this](value_type& old_value, const value_type& new_value) {
-                            m_reducer.join(&new_value, &old_value);
+                            m_reducer.join(old_value, new_value);
                             return old_value;
                         });
             } else {
