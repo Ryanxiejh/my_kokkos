@@ -805,14 +805,14 @@ public:
         const auto reduction = [&]() {
             if constexpr (!std::is_same<ReducerType, InvalidType>::value) {
                 printf("ReducerType: Built-in Type !!! \n");
-//                return cl::sycl::ONEAPI::reduction(
-//                        result_ptr, identity,
-//                        [=](value_type& old_value, const value_type& new_value) {
-//                            m_reducer.join(old_value, new_value);
-//                            return old_value;
-//                        });
-                return cl::sycl::ONEAPI::reduction(result_ptr, identity,
-                                                   std::plus<>());
+                return cl::sycl::ONEAPI::reduction(
+                        result_ptr, identity,
+                        [=](value_type& old_value, const value_type& new_value) {
+                            m_reducer.join(old_value, new_value);
+                            return old_value;
+                        });
+//                return cl::sycl::ONEAPI::reduction(result_ptr, identity,
+//                                                   std::plus<>());
             } else {
                 if constexpr (ReduceFunctorHasJoin<Functor>::value) {
                     printf("ReducerType: Custome Type !!! \n");
