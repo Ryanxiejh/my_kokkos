@@ -802,14 +802,14 @@ public:
         if constexpr (ReduceFunctorHasInit<Functor>::value)
             ValueInit::init(functor, result_ptr);
 
+        ReducerType reducer = m_reducer;
         const auto reduction = [&]() {
             if constexpr (!std::is_same<ReducerType, InvalidType>::value) {
                 printf("ReducerType: Built-in Type !!! \n");
                 return cl::sycl::ONEAPI::reduction(
                         result_ptr, identity,
-                        [this](value_type& old_value, const value_type& new_value) {
-                            //m_reducer.join(old_value, new_value);
-                            old_value += new_value;
+                        [=](value_type& old_value, const value_type& new_value) {
+                            reducer.join(old_value, new_value);
                             return old_value;
                         });
             } else {
