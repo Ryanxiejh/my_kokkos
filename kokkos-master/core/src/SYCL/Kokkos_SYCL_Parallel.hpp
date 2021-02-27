@@ -824,10 +824,8 @@ public:
                             });
                 } else {
                     printf("ReducerType: InvalidType(default) !!! \n");
-//                    return cl::sycl::ONEAPI::reduction(result_ptr, identity,
-//                                                       std::plus<>());
                     return cl::sycl::ONEAPI::reduction(result_ptr, identity,
-                                                       std::greater<>());
+                                                       std::plus<>());
                 }
             }
         }();
