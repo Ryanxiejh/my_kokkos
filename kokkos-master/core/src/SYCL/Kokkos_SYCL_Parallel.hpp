@@ -830,7 +830,7 @@ public:
             }
         }();
 
-        q.submit([&](cl::sycl::handler& cgh) {
+        auto event = q.submit([&](cl::sycl::handler& cgh) {
             cl::sycl::nd_range<1> range(m_league_size * m_team_size, m_team_size);
             sycl::accessor<char, 1, sycl::access::mode::read_write, sycl::access::target::local>
                 local_mem(m_shmem_size + m_reduce_size, cgh);
@@ -858,7 +858,7 @@ public:
             });
         });
 
-        q.wait();
+        event.wait();
 
         static_assert(ReduceFunctorHasFinal<Functor>::value ==
                       ReduceFunctorHasFinal<FunctorType>::value);
