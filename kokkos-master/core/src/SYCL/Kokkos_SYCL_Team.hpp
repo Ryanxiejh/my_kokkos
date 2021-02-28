@@ -124,6 +124,7 @@ public:
         ArgType* base_data = (ArgType*)m_team_reduce;
         if(m_team_rank == 0) base_data[0] = 0;
         base_data[m_team_rank + 1] = value;
+        team_barrier();
         if(m_team_rank == 0){
             for(int i = 1; i <= m_team_size; i++){
                 base_data[i] += base_data[i-1];
