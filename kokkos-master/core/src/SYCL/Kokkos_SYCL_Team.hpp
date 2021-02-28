@@ -490,7 +490,7 @@ KOKKOS_INLINE_FUNCTION
 template <typename iType, class FunctorType>
 KOKKOS_INLINE_FUNCTION void parallel_scan(
     const Impl::TeamThreadRangeBoundariesStruct<
-        iType, Impl::ThreadsExecTeamMember>& loop_bounds,
+        iType, Impl::SYCLTeamMember>& loop_bounds,
     const FunctorType& closure) {
   using value_type = typename Kokkos::Impl::FunctorAnalysis<
       Kokkos::Impl::FunctorPatternInterface::SCAN, void,
@@ -526,7 +526,7 @@ namespace Kokkos{
 template <typename iType, class Closure>
 KOKKOS_INLINE_FUNCTION void parallel_for(
     const Impl::ThreadVectorRangeBoundariesStruct<
-        iType, Impl::ThreadsExecTeamMember>& loop_boundaries,
+        iType, Impl::SYCLTeamMember>& loop_boundaries,
     const Closure& closure) {
   for (iType i = loop_boundaries.start; i < loop_boundaries.end;
        i += loop_boundaries.increment)
@@ -545,7 +545,7 @@ template <typename iType, class Closure, typename ValueType>
 KOKKOS_INLINE_FUNCTION
     typename std::enable_if<!Kokkos::is_reducer<ValueType>::value>::type
     parallel_reduce(const Impl::ThreadVectorRangeBoundariesStruct<
-                        iType, Impl::ThreadsExecTeamMember>& loop_boundaries,
+                        iType, Impl::SYCLTeamMember>& loop_boundaries,
                     const Closure& closure, ValueType& result) {
   result = ValueType();
   for (iType i = loop_boundaries.start; i < loop_boundaries.end;
@@ -566,7 +566,7 @@ template <typename iType, class Closure, typename ReducerType>
 KOKKOS_INLINE_FUNCTION
     typename std::enable_if<Kokkos::is_reducer<ReducerType>::value>::type
     parallel_reduce(const Impl::ThreadVectorRangeBoundariesStruct<
-                        iType, Impl::ThreadsExecTeamMember>& loop_boundaries,
+                        iType, Impl::SYCLTeamMember>& loop_boundaries,
                     const Closure& closure, const ReducerType& reducer) {
   reducer.init(reducer.reference());
   for (iType i = loop_boundaries.start; i < loop_boundaries.end;
@@ -594,7 +594,7 @@ KOKKOS_INLINE_FUNCTION
 template <typename iType, class FunctorType>
 KOKKOS_INLINE_FUNCTION void parallel_scan(
     const Impl::ThreadVectorRangeBoundariesStruct<
-        iType, Impl::ThreadsExecTeamMember>& loop_boundaries,
+        iType, Impl::SYCLTeamMember>& loop_boundaries,
     const FunctorType& closure) {
   using ValueTraits = Kokkos::Impl::FunctorValueTraits<FunctorType, void>;
   using value_type  = typename ValueTraits::value_type;
@@ -614,14 +614,14 @@ namespace Kokkos{
 template <class FunctorType>
 KOKKOS_INLINE_FUNCTION void single(
     const Impl::VectorSingleStruct<
-        Impl::ThreadsExecTeamMember>& /*single_struct*/,
+        Impl::SYCLTeamMember>& /*single_struct*/,
     const FunctorType& closure) {
     closure();
 }
 
 template <class FunctorType>
 KOKKOS_INLINE_FUNCTION void single(
-    const Impl::ThreadSingleStruct<Impl::ThreadsExecTeamMember>& single_struct,
+    const Impl::ThreadSingleStruct<Impl::SYCLTeamMember>& single_struct,
     const FunctorType& closure) {
   if (single_struct.team_member.team_rank() == 0) closure();
 }
@@ -629,14 +629,14 @@ KOKKOS_INLINE_FUNCTION void single(
 template <class FunctorType, class ValueType>
 KOKKOS_INLINE_FUNCTION void single(
     const Impl::VectorSingleStruct<
-        Impl::ThreadsExecTeamMember>& /*single_struct*/,
+        Impl::SYCLTeamMember>& /*single_struct*/,
     const FunctorType& closure, ValueType& val) {
     closure(val);
 }
 
 template <class FunctorType, class ValueType>
 KOKKOS_INLINE_FUNCTION void single(
-    const Impl::ThreadSingleStruct<Impl::ThreadsExecTeamMember>& single_struct,
+    const Impl::ThreadSingleStruct<Impl::SYCLTeamMember>& single_struct,
     const FunctorType& closure, ValueType& val) {
   if (single_struct.team_member.team_rank() == 0) {
       closure(val);
