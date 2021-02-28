@@ -260,7 +260,7 @@ public:
           m_league_size(arg_policy.league_size()),
           m_team_size(arg_policy.team_size()),
           m_vector_size(arg_policy.impl_vector_length()) {
-        m_reduce_size = 100;
+        m_reduce_size = sizeof(double)*(m_team_size+2);
         m_shmem_size = (m_policy.scratch_size(0, m_team_size) + m_policy.scratch_size(1, m_team_size) +
                         FunctorTeamShmemSize<FunctorType>::value(m_functor, m_team_size));
         using namespace cl::sycl::info;
@@ -902,7 +902,7 @@ public:
               m_league_size(arg_policy.league_size()),
               m_team_size(arg_policy.team_size()),
               m_vector_size(arg_policy.impl_vector_length()) {
-        m_reduce_size = 100;
+        m_reduce_size = sizeof(double)*(m_team_size+2);
         m_shmem_size = (m_policy.scratch_size(0, m_team_size) + m_policy.scratch_size(1, m_team_size) +
                         FunctorTeamShmemSize<FunctorType>::value(m_functor, m_team_size));
         using namespace cl::sycl::info;
@@ -923,7 +923,7 @@ public:
               m_league_size(arg_policy.league_size()),
               m_team_size(arg_policy.team_size()),
               m_vector_size(arg_policy.impl_vector_length()) {
-        m_reduce_size = 100;
+        m_reduce_size = sizeof(double)*(m_team_size+2);
         m_shmem_size = (m_policy.scratch_size(0, m_team_size) + m_policy.scratch_size(1, m_team_size) +
                         FunctorTeamShmemSize<FunctorType>::value(m_functor, m_team_size));
         using namespace cl::sycl::info;

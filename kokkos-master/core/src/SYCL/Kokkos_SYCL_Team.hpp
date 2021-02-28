@@ -69,24 +69,24 @@ public:
     template <class ValueType>
     KOKKOS_INLINE_FUNCTION void team_broadcast(ValueType& val,
                                                const int& thread_id) const {
-//        team_barrier(); // Wait for shared data write until all threads arrive here
-//        if(m_team_rank == thread_id){
-//            *((ValueType*)m_team_reduce) = val;
-//        }
-//        team_barrier(); // Wait for shared data read until root thread writes
-//        val = *((ValueType*)m_team_reduce);
+        team_barrier(); // Wait for shared data write until all threads arrive here
+        if(m_team_rank == thread_id){
+            *((ValueType*)m_team_reduce) = val;
+        }
+        team_barrier(); // Wait for shared data read until root thread writes
+        val = *((ValueType*)m_team_reduce);
     }
 
     template <class Closure, class ValueType>
     KOKKOS_INLINE_FUNCTION void team_broadcast(Closure const& f, ValueType& val,
                                                const int& thread_id) const {
-//        f(val);
-//        team_barrier(); // Wait for shared data write until all threads arrive here
-//        if(m_team_rank == thread_id){
-//            *((ValueType*)m_team_reduce) = val;
-//        }
-//        team_barrier(); // Wait for shared data read until root thread writes
-//        val = *((ValueType*)m_team_reduce);
+        f(val);
+        team_barrier(); // Wait for shared data write until all threads arrive here
+        if(m_team_rank == thread_id){
+            *((ValueType*)m_team_reduce) = val;
+        }
+        team_barrier(); // Wait for shared data read until root thread writes
+        val = *((ValueType*)m_team_reduce);
     }
 
     template <typename ReducerType>
@@ -104,16 +104,35 @@ public:
         (void)reducer;
         (void)value;
         team_barrier();
+        using value_type = typename ReducerType::value_type;
+        value_type* base_data = (value_type*)m_team_reduce;
+        base_data[m_team_rank] = value;
+        team_barrier();
         if(m_team_rank == 0){
-
+            for(int i = 1; i < m_team_size; i++){
+                reducer.join(base_data[0], base_data[i]);
+            }
         }
+        team_barrier();
+        value = base_data[0];
     }
 
     template <typename ArgType>
     KOKKOS_INLINE_FUNCTION ArgType team_scan(const ArgType& value,
                                              ArgType* const global_accum) const {
-
-        return value;
+        team_barrier();
+        using value_type = typename ReducerType::value_type;
+        value_type* base_data = (value_type*)m_team_reduce;
+        if(m_team_rank == 0) base_data[0] = 0;
+        base_data[m_team_rank + 1] = value;
+        if(m_team_rank == 0){
+            for(int i = 1; i <= m_team_size; i++){
+                base_data[i] += base_data[i-1];
+            }
+            if(global_accum) *global_accum = base_data[m_team_size];
+        }
+        team_barrier();
+        return base_data[m_team_rank];
     }
 
     template <typename ArgType>
