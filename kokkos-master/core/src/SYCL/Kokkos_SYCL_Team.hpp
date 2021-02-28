@@ -101,8 +101,6 @@ public:
     typename std::enable_if<is_reducer<ReducerType>::value>::type
     team_reduce(ReducerType const& reducer,
                 typename ReducerType::value_type& value) const noexcept {
-        (void)reducer;
-        (void)value;
         team_barrier();
         using value_type = typename ReducerType::value_type;
         value_type* base_data = (value_type*)m_team_reduce;
@@ -114,6 +112,7 @@ public:
             }
         }
         team_barrier();
+        reducer.reference() = base_data[0];
         value = base_data[0];
     }
 
@@ -122,7 +121,7 @@ public:
                                              ArgType* const global_accum) const {
         team_barrier();
         ArgType* base_data = (ArgType*)m_team_reduce;
-        if(m_team_rank == 0) base_data[0] = 0;
+        if(m_team_rank == 0) base_data[0] = ArgType{};
         base_data[m_team_rank + 1] = value;
         team_barrier();
         if(m_team_rank == 0){
@@ -347,7 +346,304 @@ public:
 
 };
 
+} //namespace Impl
+} //namespace Kokkos
+
+
+namespace Kokkos{
+
+template <typename iType>
+KOKKOS_INLINE_FUNCTION
+    Impl::TeamThreadRangeBoundariesStruct<iType, Impl::SYCLTeamMember>
+    TeamThreadRange(const Impl::SYCLTeamMember& thread,
+                    const iType& count) {
+  return Impl::TeamThreadRangeBoundariesStruct<iType,
+                                               Impl::SYCLTeamMember>(
+      thread, count);
 }
+
+template <typename iType1, typename iType2>
+KOKKOS_INLINE_FUNCTION Impl::TeamThreadRangeBoundariesStruct<
+    typename std::common_type<iType1, iType2>::type,
+    Impl::SYCLTeamMember>
+TeamThreadRange(const Impl::SYCLTeamMember& thread, const iType1& begin,
+                const iType2& end) {
+  using iType = typename std::common_type<iType1, iType2>::type;
+  return Impl::TeamThreadRangeBoundariesStruct<iType,
+                                               Impl::SYCLTeamMember>(
+      thread, iType(begin), iType(end));
 }
+
+template <typename iType>
+KOKKOS_INLINE_FUNCTION
+    Impl::ThreadVectorRangeBoundariesStruct<iType, Impl::SYCLTeamMember>
+    ThreadVectorRange(const Impl::SYCLTeamMember& thread,
+                      const iType& count) {
+  return Impl::ThreadVectorRangeBoundariesStruct<iType,
+                                                 Impl::SYCLTeamMember>(
+      thread, count);
+}
+
+template <typename iType>
+KOKKOS_INLINE_FUNCTION
+    Impl::ThreadVectorRangeBoundariesStruct<iType, Impl::SYCLTeamMember>
+    ThreadVectorRange(const Impl::SYCLTeamMember& thread,
+                      const iType& arg_begin, const iType& arg_end) {
+  return Impl::ThreadVectorRangeBoundariesStruct<iType,
+                                                 Impl::SYCLTeamMember>(
+      thread, arg_begin, arg_end);
+}
+
+KOKKOS_INLINE_FUNCTION
+Impl::ThreadSingleStruct<Impl::SYCLTeamMember> PerTeam(
+    const Impl::SYCLTeamMember& thread) {
+  return Impl::ThreadSingleStruct<Impl::SYCLTeamMember>(thread);
+}
+
+KOKKOS_INLINE_FUNCTION
+Impl::VectorSingleStruct<Impl::SYCLTeamMember> PerThread(
+    const Impl::SYCLTeamMember& thread) {
+  return Impl::VectorSingleStruct<Impl::SYCLTeamMember>(thread);
+}
+
+} //namespace Kokkos
+
+namespace Kokkos{
+
+/** \brief  Inter-thread parallel_for.
+ *
+ *  Executes closure(iType i) for each i=[0..N).
+ *
+ * The range [0..N) is mapped to all threads of the the calling thread team.
+ */
+template <typename iType, class Closure>
+KOKKOS_INLINE_FUNCTION void parallel_for(
+    const Impl::TeamThreadRangeBoundariesStruct<iType, Impl::SYCLTeamMember>&
+        loop_boundaries,
+    const Closure& closure) {
+  for (iType i = loop_boundaries.start; i < loop_boundaries.end;
+       i += loop_boundaries.increment)
+    closure(i);
+}
+
+/** \brief  Inter-thread parallel_reduce assuming summation.
+ *
+ *  Executes closure(iType i, ValueType & val) for each i=[0..N)
+ *
+ *  The range [0..N) is mapped to all threads of the
+ *  calling thread team and a summation of val is
+ *  performed and put into result.
+ */
+template <typename iType, class Closure, typename ValueType>
+KOKKOS_INLINE_FUNCTION
+    typename std::enable_if<!Kokkos::is_reducer<ValueType>::value>::type
+    parallel_reduce(const Impl::TeamThreadRangeBoundariesStruct<
+                        iType, Impl::SYCLTeamMember>& loop_boundaries,
+                    const Closure& closure, ValueType& result) {
+  ValueType intermediate;
+  Sum<ValueType> sum(intermediate);
+  sum.init(intermediate);
+
+  for (iType i = loop_boundaries.start; i < loop_boundaries.end;
+       i += loop_boundaries.increment) {
+    ValueType tmp = ValueType();
+    closure(i, tmp);
+    intermediate += tmp;
+  }
+
+  loop_boundaries.thread.team_reduce(sum, intermediate);
+  result = sum.reference();
+}
+
+/** \brief  Inter-thread parallel_reduce with a reducer.
+ *
+ *  Executes closure(iType i, ValueType & val) for each i=[0..N)
+ *
+ *  The range [0..N) is mapped to all threads of the
+ *  calling thread team and a summation of val is
+ *  performed and put into result.
+ */
+template <typename iType, class Closure, class ReducerType>
+KOKKOS_INLINE_FUNCTION
+    typename std::enable_if<Kokkos::is_reducer<ReducerType>::value>::type
+    parallel_reduce(const Impl::TeamThreadRangeBoundariesStruct<
+                        iType, Impl::SYCLTeamMember>& loop_boundaries,
+                    const Closure& closure, const ReducerType& reducer) {
+  typename ReducerType::value_type value;
+  reducer.init(value);
+
+  for (iType i = loop_boundaries.start; i < loop_boundaries.end;
+       i += loop_boundaries.increment) {
+    closure(i, value);
+  }
+
+  loop_boundaries.member.team_reduce(reducer, value);
+}
+
+/** \brief  Inter-thread parallel exclusive prefix sum.
+ *
+ *  Executes closure(iType i, ValueType & val, bool final) for each i=0..N-1.
+ *
+ *  The range [0..N) is mapped to each rank in the team (whose global rank is
+ *  less than N) and a scan operation is performed.
+ */
+template <typename iType, class FunctorType>
+KOKKOS_INLINE_FUNCTION void parallel_scan(
+    const Impl::TeamThreadRangeBoundariesStruct<
+        iType, Impl::ThreadsExecTeamMember>& loop_bounds,
+    const FunctorType& closure) {
+  using value_type = typename Kokkos::Impl::FunctorAnalysis<
+      Kokkos::Impl::FunctorPatternInterface::SCAN, void,
+      FunctorType>::value_type;
+
+  auto scan_val = value_type{};
+
+  // Intra-member scan
+  for (iType i = loop_bounds.start; i < loop_bounds.end;
+       i += loop_bounds.increment) {
+      closure(i, scan_val, false);
+  }
+
+  // 'scan_val' output is the exclusive prefix sum
+  scan_val = loop_bounds.thread.team_scan(scan_val);
+
+  for (iType i = loop_bounds.start; i < loop_bounds.end;
+       i += loop_bounds.increment) {
+      closure(i, scan_val, true);
+  }
+}
+
+} //namespace Kokkos
+
+namespace Kokkos{
+
+/** \brief  Inter-thread parallel_for.
+ *
+ *  Executes closure(iType i) for each i=[0..N).
+ *
+ * The range i=0..N-1 is mapped to all vector lanes of the the calling thread.
+ */
+template <typename iType, class Closure>
+KOKKOS_INLINE_FUNCTION void parallel_for(
+    const Impl::ThreadVectorRangeBoundariesStruct<
+        iType, Impl::ThreadsExecTeamMember>& loop_boundaries,
+    const Closure& closure) {
+  for (iType i = loop_boundaries.start; i < loop_boundaries.end;
+       i += loop_boundaries.increment)
+      closure(i);
+}
+
+/** \brief  Inter-thread parallel_reduce assuming summation.
+ *
+ *  Executes closure(iType i, ValueType & val) for each i=[0..N)
+ *
+ *  The range [0..N) is mapped to all vector lanes of the
+ *  calling thread and a summation of val is
+ *  performed and put into result.
+ */
+template <typename iType, class Closure, typename ValueType>
+KOKKOS_INLINE_FUNCTION
+    typename std::enable_if<!Kokkos::is_reducer<ValueType>::value>::type
+    parallel_reduce(const Impl::ThreadVectorRangeBoundariesStruct<
+                        iType, Impl::ThreadsExecTeamMember>& loop_boundaries,
+                    const Closure& closure, ValueType& result) {
+  result = ValueType();
+  for (iType i = loop_boundaries.start; i < loop_boundaries.end;
+       i += loop_boundaries.increment) {
+    closure(i, result);
+  }
+}
+
+/** \brief  Inter-thread parallel_reduce with a reducer.
+ *
+ *  Executes closure(iType i, ValueType & val) for each i=[0..N)
+ *
+ *  The range [0..N) is mapped to all vector lanes of the
+ *  calling thread and a summation of val is
+ *  performed and put into result.
+ */
+template <typename iType, class Closure, typename ReducerType>
+KOKKOS_INLINE_FUNCTION
+    typename std::enable_if<Kokkos::is_reducer<ReducerType>::value>::type
+    parallel_reduce(const Impl::ThreadVectorRangeBoundariesStruct<
+                        iType, Impl::ThreadsExecTeamMember>& loop_boundaries,
+                    const Closure& closure, const ReducerType& reducer) {
+  reducer.init(reducer.reference());
+  for (iType i = loop_boundaries.start; i < loop_boundaries.end;
+       i += loop_boundaries.increment) {
+    closure(i, reducer.reference());
+  }
+}
+
+/** \brief  Intra-thread vector parallel exclusive prefix sum.
+ *
+ *  Executes closure(iType i, ValueType & val, bool final) for each i=[0..N)
+ *
+ *  The range [0..N) is mapped to all vector lanes in the
+ *  thread and a scan operation is performed.
+ *
+ *  The range i=0..N-1 is mapped to all vector lanes in the thread and a scan
+ *  operation is performed. Depending on the target execution space the operator
+ *  might be called twice: once with final=false and once with final=true. When
+ *  final==true val contains the prefix sum value. The contribution of this "i"
+ *  needs to be added to val no matter whether final==true or not. In a serial
+ *  execution (i.e. team_size==1) the operator is only called once with
+ *  final==true. Scan_val will be set to the final sum value over all vector
+ *  lanes.
+ */
+template <typename iType, class FunctorType>
+KOKKOS_INLINE_FUNCTION void parallel_scan(
+    const Impl::ThreadVectorRangeBoundariesStruct<
+        iType, Impl::ThreadsExecTeamMember>& loop_boundaries,
+    const FunctorType& closure) {
+  using ValueTraits = Kokkos::Impl::FunctorValueTraits<FunctorType, void>;
+  using value_type  = typename ValueTraits::value_type;
+
+  value_type scan_val = value_type();
+
+  for (iType i = loop_boundaries.start; i < loop_boundaries.end;
+       i += loop_boundaries.increment) {
+      closure(i, scan_val, true);
+  }
+}
+
+} //namespace Kokkos
+
+namespace Kokkos{
+
+template <class FunctorType>
+KOKKOS_INLINE_FUNCTION void single(
+    const Impl::VectorSingleStruct<
+        Impl::ThreadsExecTeamMember>& /*single_struct*/,
+    const FunctorType& closure) {
+    closure();
+}
+
+template <class FunctorType>
+KOKKOS_INLINE_FUNCTION void single(
+    const Impl::ThreadSingleStruct<Impl::ThreadsExecTeamMember>& single_struct,
+    const FunctorType& closure) {
+  if (single_struct.team_member.team_rank() == 0) closure();
+}
+
+template <class FunctorType, class ValueType>
+KOKKOS_INLINE_FUNCTION void single(
+    const Impl::VectorSingleStruct<
+        Impl::ThreadsExecTeamMember>& /*single_struct*/,
+    const FunctorType& closure, ValueType& val) {
+    closure(val);
+}
+
+template <class FunctorType, class ValueType>
+KOKKOS_INLINE_FUNCTION void single(
+    const Impl::ThreadSingleStruct<Impl::ThreadsExecTeamMember>& single_struct,
+    const FunctorType& closure, ValueType& val) {
+  if (single_struct.team_member.team_rank() == 0) {
+      closure(val);
+  }
+  single_struct.team_member.team_broadcast(val, 0);
+}
+
+} //namespace Kokkos
 
 #endif //MY_KOKKOS_KOKKOS_SYCL_TEAM_HPP
