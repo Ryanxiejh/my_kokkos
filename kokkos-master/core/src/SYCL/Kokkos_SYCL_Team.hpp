@@ -121,8 +121,7 @@ public:
     KOKKOS_INLINE_FUNCTION ArgType team_scan(const ArgType& value,
                                              ArgType* const global_accum) const {
         team_barrier();
-        using value_type = typename ReducerType::value_type;
-        value_type* base_data = (value_type*)m_team_reduce;
+        ArgType* base_data = (ArgType*)m_team_reduce;
         if(m_team_rank == 0) base_data[0] = 0;
         base_data[m_team_rank + 1] = value;
         if(m_team_rank == 0){
