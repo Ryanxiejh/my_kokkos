@@ -854,7 +854,7 @@ public:
                 else
                     functor(WorkTag(), member, partial);
                 sum.combine(partial);
-                out << item_id << " " << partial << " " << *result_ptr << cl::sycl::endl;
+                //out << item_id << " " << partial << " " << *result_ptr << cl::sycl::endl;
             });
         });
 
