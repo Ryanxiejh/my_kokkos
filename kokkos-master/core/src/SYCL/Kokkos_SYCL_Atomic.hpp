@@ -8,9 +8,6 @@
 namespace Kokkos{
 namespace SyclAtomic{
 
-using LocalSpace = sycl::access::address_space::local_space;
-using GlobalSpace = sycl::access::address_space::global_space;
-
 typedef enum {
     SyclLocalSpace,
     SyclGlobalSpace
