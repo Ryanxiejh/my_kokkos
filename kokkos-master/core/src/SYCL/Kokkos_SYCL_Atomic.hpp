@@ -6,7 +6,7 @@
 #define MY_KOKKOS_KOKKOS_SYCL_ATOMIC_HPP
 
 namespace Kokkos{
-namespace SYCL{
+namespace SyclAtomic{
 
 using LocalSpace = sycl::access::address_space::local_space;
 using GlobalSpace = sycl::access::address_space::global_space;
@@ -181,7 +181,7 @@ KOKKOS_INLINE_FUNCTION void atomic_decrement(T1* const ptr, SyclAtomicSpace targ
 }
 
 
-} //namespace SYCL
+} //namespace SyclAtomic
 } //namespace Kokkos
 
 #endif //MY_KOKKOS_KOKKOS_SYCL_ATOMIC_HPP
